@@ -1,8 +1,8 @@
 spring:
   r2dbc:
     pool:
-      initial-size: 10
-      max-size: 10
+      initial-size: 50
+      max-size: 50
       max-life-time: 30m
       max-idle-time: 30m
 

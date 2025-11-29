@@ -118,9 +118,13 @@ Spring WebFlux는 기본적으로 Reactor(Mono/Flux)를 사용하지만, 비즈�
 - **Imperative Style**: 콜백 지옥이나 연산자 체이닝 없이 직관적인 명령형 스타일로 비동기 코드를 작성합니다.
 - **Integration**: `CoWebExceptionHandler`, `awaitSingle`, `flow` 등을 통해 WebFlux와 매끄럽게 연동합니다.
 
-### 5.3. R2DBC (Reactive Relational Database Connectivity)
-완전한 논블로킹 스택을 유지하기 위해 JDBC 대신 **R2DBC**를 사용합니다.
-- MariaDB/MySQL과 비동기적으로 통신하며, 높은 트래픽 상황에서도 스레드 풀 고갈 없이 효율적인 리소스 사용이 가능합니다.
+### 5.3. R2DBC & Event-Driven Persistence
+완전한 논블로킹 스택을 유지하기 위해 JDBC 대신 **R2DBC**를 사용하며, 성능 극대화를 위해 **이벤트 기반 아키텍처**를 도입했습니다.
+
+- **Event-Driven**: `ShortenUrlUseCase`는 ID 생성 후 즉시 `ShortUrlCreatedEvent`를 발행하고 응답을 반환합니다. 이를 통해 사용자 응답 시간(Latency)을 최소화합니다.
+- **Batch Processing**: `UrlPersistenceEventListener`는 발행된 이벤트를 버퍼링하여 일정 크기(예: 500개) 또는 시간 단위로 묶어 DB에 **배치 저장(Batch Insert)**합니다. 이는 DB 연결 풀 효율을 극대화하고 부하를 줄입니다.
+- **No-Check Strategy**: 단축 URL 생성 시 기존 URL 존재 여부를 확인하는 DB 조회(`SELECT`) 비용을 제거하기 위해, **중복 생성을 허용**하는 전략을 채택했습니다. 이는 성능을 위해 데이터 중복을 허용하는 Trade-off입니다.
+- **Write-Through Caching**: 이벤트 리스너가 DB 저장에 성공한 후, 비동기적으로 로컬 캐시(Caffeine)를 갱신하여 직후 조회 요청(`retrieve`)에 빠르게 응답할 수 있도록 합니다.
 
 ### 5.4. Observability & Monitoring
 운영 환경에서의 안정성과 성능을 보장하기 위해 포괄적인 모니터링 체계를 구축했습니다.
@@ -145,15 +149,18 @@ Spring WebFlux는 기본적으로 Reactor(Mono/Flux)를 사용하지만, 비즈�
 
 ---
 
-## 6. Worker Management (워커 관리 상세)
-분산 환경에서 Worker ID 충돌을 방지하기 위해 R2DBC를 사용하여 DB(`snowflake_workers` 테이블)를 통해 동적으로 Worker ID를 할당하고 관리합니다.
+## 6. Configuration Management (설정 관리)
+설정 파일의 복잡도를 줄이고 관리를 용이하게 하기 위해 기능별로 설정 파일을 분리했습니다. `application.yml`에서 프로파일을 통해 필요한 설정을 로드합니다.
 
-- **Active/Idle 상태 관리**:
-    - 애플리케이션 시작 시 `IDLE` 상태인 워커 ID를 할당받아 `ACTIVE` 상태로 변경합니다.
-    - 주기적으로 Heartbeat를 보내 `updated_at`을 갱신합니다.
-- **Worker Cleansing (`WorkerCleansingUseCase`)**:
-    - 스케줄러가 주기적으로 실행되어, 5분 이상 `updated_at`이 갱신되지 않은 `ACTIVE` 상태의 워커(좀비 워커)를 찾아 정리합니다.
-    - 해당 워커의 상태를 `IDLE`로, 이름을 `NONE`으로 초기화하여 다른 인스턴스가 재사용할 수 있도록 합니다.
+- `application.yml`: 메인 설정 및 프로파일 관리.
+- `application-common.yml`: 애플리케이션 공통 설정.
+- `application-logging.yml`: 로깅 및 Actuator 설정 (환경별 로그 레벨 포함).
+- `application-database.yml`: R2DBC 및 Connection Pool 설정.
+- `application-doc.yml`: Swagger/OpenAPI 설정.
+
+---
+
+## 7. Worker Management (워커 관리 상세)
 
 ---
 

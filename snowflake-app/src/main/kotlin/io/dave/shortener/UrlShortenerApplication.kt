@@ -9,5 +9,6 @@ import org.springframework.scheduling.annotation.EnableScheduling
 class UrlShortenerApplication
 
 fun main(args: Array<String>) {
+    System.setProperty("reactor.netty.ioWorkerCount", "16")
     runApplication<UrlShortenerApplication>(*args)
 }

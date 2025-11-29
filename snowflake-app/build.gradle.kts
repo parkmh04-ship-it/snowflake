@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.kotlinxSerialization)
     implementation(libs.kotlin.reflect)
     implementation(libs.spring.boot.starter.cache)
+    implementation(libs.kaffeine)
     implementation(libs.spring.boot.starter.data.r2dbc)
     implementation(libs.r2dbcMariadb)
     implementation(libs.springdoc.openapi.starter.webflux.ui)
