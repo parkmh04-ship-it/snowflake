@@ -30,17 +30,12 @@ class ShortenUrlUseCase(
     suspend fun shorten(longUrlStr: String): UrlMapping {
         val longUrl = LongUrl(longUrlStr)
         
-        // 1. 이미 존재하는 긴 URL인지 확인 (이것은 DB에 쿼리해야 하므로 UrlPort 유지)
-        val existingMapping = urlPort.findByLongUrl(longUrl)
-        if (existingMapping != null) {
-            return existingMapping
-        }
-
-        // 2. 새로운 단축 URL 생성
+        // 1. 새로운 단축 URL 생성 (중복 검사 없이 바로 생성)
         val shortUrl = shortUrlGenerator.generate()
         val newMapping = UrlMapping(shortUrl, longUrl)
         
-        // 3. 이벤트 발행 (DB 적재는 이벤트 리스너가 비동기로 처리)
+        // 2. 이벤트 발행 (DB 적재는 이벤트 리스너가 비동기로 처리)
+        // 이벤트 발행에 실패하면 예외가 발생하여 캐시 저장 및 반환 로직이 실행되지 않습니다.
         eventPublisher.publishEvent(ShortUrlCreatedEvent(newMapping.shortUrl, newMapping.longUrl, newMapping.createdAt))
         
         // 4. 생성된 매핑 객체를 바로 반환 (응답 시간 최소화)

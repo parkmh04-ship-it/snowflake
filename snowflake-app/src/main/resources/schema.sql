@@ -1,9 +1,13 @@
--- 기존 테이블 정의
-CREATE TABLE IF NOT EXISTS shortener_history (
+-- 기존 shortener_history 테이블 삭제 (개발용)
+DROP TABLE IF EXISTS shortener_history;
+
+-- shortener_history 테이블 생성 (인덱스 포함)
+CREATE TABLE shortener_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     short_url VARCHAR(255) NOT NULL UNIQUE,
     long_url TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_long_url (long_url(255))
 );
 
 -- 기존 worker_node 테이블 삭제

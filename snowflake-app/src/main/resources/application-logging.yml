@@ -33,3 +33,13 @@ spring:
 logging:
   level:
     root: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: perf
+logging:
+  level:
+    root: OFF
+    io.dave.shortener.adapter.outbound.event: OFF

@@ -6,6 +6,9 @@ import io.dave.shortener.domain.model.LongUrl
 import io.dave.shortener.domain.model.ShortUrl
 import io.dave.shortener.domain.model.UrlMapping
 import io.dave.shortener.domain.port.outbound.UrlPort
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Repository
 import java.time.ZoneId
 
@@ -20,10 +23,18 @@ class UrlPersistenceAdapter(
         return savedEntity.toDomain()
     }
 
+    override fun saveAll(mappings: Flow<UrlMapping>): Flow<UrlMapping> {
+        val entities = mappings.map { it.toEntity() }
+        return r2dbcRepository.saveAll(entities)
+            .map { it.toDomain() }
+    }
+
+    @Cacheable(value = ["shortUrlCache"], key = "#shortUrl.value")
     override suspend fun findByShortUrl(shortUrl: ShortUrl): UrlMapping? {
         return r2dbcRepository.findByShortUrl(shortUrl.value)?.toDomain()
     }
 
+    @Cacheable(value = ["longUrlCache"], key = "#longUrl.value")
     override suspend fun findByLongUrl(longUrl: LongUrl): UrlMapping? {
         return r2dbcRepository.findByLongUrl(longUrl.value)?.toDomain()
     }
