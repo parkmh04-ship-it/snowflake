@@ -1,0 +1,10 @@
+info:
+  title: URL Shortener API
+  version: v1.0.0
+
+app:
+  base-url: http://localhost:8080
+  shorten-path-prefix: /shorten
+
+snowflake:
+  worker-thread-count: 4

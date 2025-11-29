@@ -1,0 +1,140 @@
+@startuml
+' 스타일 설정
+skinparam classAttributeIconSize 0
+skinparam componentStyle uml2
+
+' --- Domain Layer ---
+package "Domain" {
+    package "Model" {
+        class ShortUrl {
+            +value: String
+        }
+        class LongUrl {
+            +value: String
+        }
+        class UrlMapping {
+            +shortUrl: ShortUrl
+            +longUrl: LongUrl
+            +createdAt: Long
+        }
+        class Worker {
+            +id: Long
+            +workerNum: Long
+            +workerName: String
+            +status: WorkerStatus
+            +updatedAt: LocalDateTime
+        }
+        enum WorkerStatus {
+            ACTIVE
+            IDLE
+        }
+    }
+
+    package "Port (Outbound)" {
+        interface UrlPort {
+            +save(UrlMapping): UrlMapping
+            +findByShortUrl(ShortUrl): UrlMapping?
+            +findByLongUrl(LongUrl): UrlMapping?
+            +existsByShortUrl(ShortUrl): Boolean
+        }
+        interface WorkerPort {
+            +findByWorkerNums(List<Long>): Flow<Worker>
+            +findByStatusAndUpdatedAtBefore(WorkerStatus, LocalDateTime): Flow<Worker>
+            +updateUpdatedAt(List<Long>, LocalDateTime): Int
+            +cleanseWorkers(List<Long>, LocalDateTime): Int
+            +saveAll(Flow<Worker>): Flow<Worker>
+        }
+    }
+
+    package "Component/Generator" {
+        class ShortUrlGenerator <<Service>> {
+            +generate(): ShortUrl
+        }
+        class SnowflakeIdGenerator {
+            +nextId(): Long
+        }
+        class Base62Encoder {
+            {static} +encode(Long): String
+        }
+        class PooledIdGenerator {
+            +PooledIdGenerator(List<SnowflakeIdGenerator>, MeterRegistry)
+            +nextId(): Long
+        }
+    }
+}
+
+' --- Application Layer ---
+package "Application" {
+    package "Usecase" {
+        class ShortenUrlUseCase <<Usecase>> {
+            +shorten(String): UrlMapping
+        }
+        class RetrieveUrlUseCase <<Usecase>> {
+            +retrieve(String): UrlMapping?
+        }
+        class WorkerCleansingUseCase <<Usecase>> {
+            +cleanseIdleWorkers(): Int
+        }
+        class WorkerHeartbeatUseCase <<Usecase>> {
+            +heartbeat(Long): Int
+        }
+    }
+}
+
+' --- Adapter Layer ---
+package "Adapter" {
+    package "Inbound (Web)" {
+        class ShortenerHandler <<Component>> {
+            +shorten(ServerRequest): ServerResponse
+            +redirect(ServerRequest): ServerResponse
+        }
+        class WorkerInfoHandler <<Component>> {
+            +getActiveWorkers(ServerRequest): ServerResponse
+        }
+    }
+
+    package "Outbound (Persistence)" {
+        class UrlPersistenceAdapter <<Repository>> {
+        }
+        class WorkerPersistenceAdapter <<Repository>> {
+        }
+        
+        interface ShortUrlR2dbcRepository <<Spring Data>>
+        interface WorkerRepository <<Spring Data>> {
+            +cleanseWorkers(List<Long>, LocalDateTime): Int
+        }
+    }
+}
+
+' --- Relationships ---
+
+' Application -> Domain
+ShortenUrlUseCase --> ShortUrlGenerator : uses
+ShortenUrlUseCase --> UrlPort : uses
+RetrieveUrlUseCase --> UrlPort : uses
+WorkerCleansingUseCase --> WorkerPort : uses
+WorkerHeartbeatUseCase --> WorkerPort : uses
+
+' Domain Internal
+ShortUrlGenerator --> PooledIdGenerator : uses
+ShortUrlGenerator --> Base62Encoder : uses
+ShortUrlGenerator --> UrlPort : uses (check existence)
+PooledIdGenerator --> SnowflakeIdGenerator : uses
+UrlMapping *-- ShortUrl
+UrlMapping *-- LongUrl
+Worker *-- WorkerStatus
+
+' Adapter (Inbound) -> Application
+ShortenerHandler --> ShortenUrlUseCase : uses
+ShortenerHandler --> RetrieveUrlUseCase : uses
+WorkerInfoHandler ..> AssignedWorkerInfo : uses (Config)
+
+' Adapter (Outbound) -> Domain Port (Implementation)
+UrlPersistenceAdapter ..|> UrlPort
+WorkerPersistenceAdapter ..|> WorkerPort
+
+' Adapter (Outbound) -> Spring Data
+UrlPersistenceAdapter --> ShortUrlR2dbcRepository
+WorkerPersistenceAdapter --> WorkerRepository
+
+@enduml

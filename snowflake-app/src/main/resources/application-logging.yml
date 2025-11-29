@@ -1,0 +1,35 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: snowflake-app
+    web:
+      server:
+        requests:
+          requests-seconds:
+            metric-name: http.server.requests
+            auto-time-requests: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: alpha
+logging:
+  level:
+    root: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: beta
+logging:
+  level:
+    root: DEBUG
