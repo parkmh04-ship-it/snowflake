@@ -1,9 +1,9 @@
 # ❄️ Snowflake URL Shortener
 
-![GitHub top language](https://img.shields.io/github/top-language/parkmh04-ship-it/snowflake-url-shortener)
-![GitHub licence](https://img.shields.io/github/license/parkmh04-ship-it/snowflake-url-shortener)
-![GitHub issues](https://img.shields.io/github/issues/parkmh04-ship-it/snowflake-url-shortener)
-![GitHub stars](https://img.shields.io/github/stars/parkmh04-ship-it/snowflake-url-shortener)
+![GitHub top language](https://img.shields.io/github/top-language/parkmh04-ship-it/snowflake)
+![GitHub licence](https://img.shields.io/github/license/parkmh04-ship-it/snowflake)
+![GitHub issues](https://img.shields.io/github/issues/parkmh04-ship-it/snowflake)
+![GitHub stars](https://img.shields.io/github/stars/parkmh04-ship-it/snowflake)
 
 ## 🚀 프로젝트 소개
 
@@ -172,6 +172,81 @@ k6 run docs/k6/spike-test.js
 ```
 *   10초 만에 1000 VU까지 급격히 부하를 증가시킵니다.
 *   시스템이 고부하 상태에서 생존하는지, 그리고 부하가 줄어들 때 정상적으로 회복하는지 확인합니다.
+
+### 3. 테스트 시나리오
+프로젝트는 목적에 맞는 다양한 테스트 스크립트를 제공합니다.
+
+#### 기본 부하 테스트 (Load Test)
+일반적인 트래픽 상황을 시뮬레이션합니다.
+```bash
+k6 run docs/k6/load-test.js
+```
+*   **Warm-up**: 30초 동안 50 VU까지 증가
+*   **Load**: 1분 동안 200 VU 유지
+*   **Cooldown**: 30초 동안 0 VU로 감소
+
+#### 한계 테스트 (Stress Test)
+시스템의 한계 처리량(Max TPS)과 포화 지점을 찾기 위해 점진적으로 부하를 높입니다.
+```bash
+k6 run docs/k6/stress-test.js
+```
+*   2분마다 100 VU씩 증가시켜 최대 400 VU까지 테스트합니다.
+*   95%의 요청이 500ms 이내에 처리되는지 검증합니다.
+
+#### 스파이크 테스트 (Spike Test)
+갑작스러운 트래픽 폭증에 대한 시스템의 반응과 회복력을 테스트합니다.
+```bash
+k6 run docs/k6/spike-test.js
+```
+*   10초 만에 1000 VU까지 급격히 부하를 증가시킵니다.
+*   시스템이 고부하 상태에서 생존하는지, 그리고 부하가 줄어들 때 정상적으로 회복하는지 확인합니다.
+
+### 4. 성능 최적화 과정 및 결과 (Performance Optimization & Results)
+
+애플리케이션의 `shorten` API는 초기 구현 단계에서 `r2dbc_pool_pending_connections` 증가와 높은 응답 시간으로 인해 성능 병목이 있었습니다. 여러 차례의 튜닝과 아키텍처 개선을 통해 다음과 같은 최적의 성능을 달성했습니다.
+
+#### 주요 최적화 포인트:
+
+1.  **Event-Driven Persistence & Batch Processing**: `ShortenUrlUseCase`가 ID 생성 후 `ShortUrlCreatedEvent`를 발행하고 즉시 응답하도록 변경했습니다. `UrlPersistenceEventListener`는 이벤트를 비동기적으로 배치 처리(500개 또는 100ms)하여 DB 적재 부하를 획기적으로 줄였습니다.
+2.  **No-Check Strategy**: `shorten` API 호출 시 `longUrl` 중복 검사를 위한 DB 조회(`UrlPort.findByLongUrl`)를 제거했습니다. 이는 매번 새로운 단축 URL을 생성하게 하지만, 동기 DB 조회로 인한 가장 큰 병목을 제거하여 응답 시간을 극적으로 단축했습니다.
+3.  **Database Indexing**: `shortener_history` 테이블의 `long_url` 컬럼에 인덱스(`idx_long_url`)를 추가하여, `retrieve` API나 (만약 중복 검사를 다시 도입할 경우) `findByLongUrl`의 조회 성능을 향상시켰습니다.
+4.  **R2DBC Connection Pool Tuning**: `application-database.yml`에서 R2DBC 연결 풀의 `initial-size`와 `max-size`를 50으로 조정하여 충분한 DB 연결 리소스를 확보했습니다.
+5.  **Netty Worker Thread Count**: `UrlShortenerApplication`에서 `reactor.netty.ioWorkerCount`를 16으로 설정하여 비동기 I/O 처리량을 최적화했습니다.
+
+#### 최종 k6 Load Test 결과 (200 VU, 2분): 
+
+**k6 Output:**
+```
+  █ TOTAL RESULTS                                                                                                                
+                                                                                                                                 
+    checks_total.......: 1092190 9100.812115/s                                                                                   
+    checks_succeeded...: 100.00% 1092190 out of 1092190                                                                          
+    checks_failed......: 0.00%   0 out of 1092190                                                                                
+                                                                                                                                 
+    ✓ is status 201                                                                                                              
+    ✓ response time < 200ms                                                                                                      
+                                                                                                                                 
+    HTTP                                                                                                                         
+    http_req_duration..............: avg=10.25ms min=834µs   med=9.04ms  max=98.68ms p(90)=18.69ms p(95)=21.9ms                  
+      { expected_response:true }...: avg=10.25ms min=834µs   med=9.04ms  max=98.68ms p(90)=18.69ms p(95)=21.9ms                  
+    http_req_failed................: 0.00%  0 out of 546095                                                                      
+    http_reqs......................: 546095 4550.406058/s                                                                        
+                                                                                                                                 
+    EXECUTION                                                                                                                    
+    iteration_duration.............: avg=20.56ms min=10.95ms med=19.36ms max=111.9ms p(90)=29.06ms p(95)=32.26ms                 
+    iterations.....................: 546095 4550.406058/s                                                                        
+                                                                                                                                 
+running (2m00.0s), 000/200 VUs, 546095 complete and 0 interrupted iterations                                                     
+default ✓ [======================================] 000/200 VUs  2m0s
+```
+
+**핵심 지표 요약:**
+*   **평균 응답 시간**: `10.25ms`
+*   **95% 응답 시간**: `21.9ms` 미만
+*   **초당 처리량 (TPS)**: `4550+ req/s`
+*   **성공률**: `100%`
+
+이 결과는 애플리케이션이 높은 부하 상황에서도 매우 빠르고 안정적으로 동작함을 보여줍니다.
 
 ## ✅ 테스트 실행
 
