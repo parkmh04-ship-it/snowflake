@@ -4,9 +4,61 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3f5c32d9-68fd-44e1-9362-3de85904e702" name="Changes" comment="Refactor(snowflake) : 생성성능 개선">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/snowflake-app/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/README.md" afterDir="false" />
+    <list default="true" id="3f5c32d9-68fd-44e1-9362-3de85904e702" name="Changes" comment="Feat(Perf): Snowflake URL 단축기 성능 최적화 (이벤트 기반, 배치 삽입)&#10;&#10;아키텍처 변경 및 튜닝을 통해 Snowflake URL 단축기 서비스의 성능을 대폭 개선했습니다.&#10;&#10;주요 변경 및 최적화 내용은 다음과 같습니다:&#10;&#10;1. 이벤트 기반 비동기 영속성 도입:&#10;    * Shorten API는 ID 생성 후 ShortUrlCreatedEvent를 발행하고 즉시 응답합니다.&#10;    * UrlPersistenceEventListener는 이벤트를 비동기적으로 배치 처리(500개/100ms)하여 DB 적재 부하를 획기적으로 줄였습니다.&#10;&#10;2. 중복 허용 전략 (No-Check):&#10;    * shorten API에서 longUrl 중복 검사(DB 조회)를 제거하여 동기 DB 조회 병목을 제거하고 응답 시간을 극적으로 단축했습니다. (중복된 longUrl에 대해 새로운 shortUrl이 생성됨)&#10;&#10;3. 인프라 튜닝:&#10;    * R2DBC 연결 풀 (`initial-size`, `max-size` 50) 및 Netty 워커 스레드(`reactor.netty.ioWorkerCount` 16)를 최적화했습니다.&#10;    * long_url 컬럼에 인덱스(`idx_long_url`)를 추가하여 `retrieve` API 성능을 향상했습니다.&#10;&#10;최종 k6 부하 테스트 결과 (200 VU, 2분):&#10;- 평균 응답 시간: 10.25ms (이전 ~800ms 대비)&#10;- 초당 처리량 (TPS): 4550+ req/s (이전 ~125 req/s 대비 약 36배 증가)&#10;&#10;Docs: ARCHITECTURE.md, sequence_diagram.puml 등 관련 문서 현행화">
+      <change beforePath="$PROJECT_DIR$/.gradle/8.14/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.14/checksums/checksums.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.14/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.14/executionHistory/executionHistory.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/8.14/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.14/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/ARCHITECTURE.md" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/ARCHITECTURE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/UrlShortenerApplication.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/SnowflakeApplication.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/inbound/GlobalErrorWebExceptionHandler.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/inbound/GlobalErrorWebExceptionHandler.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/inbound/dto/ShortenRequest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/inbound/dto/ShortenRequest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/inbound/dto/ShortenResponse.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/inbound/dto/ShortenResponse.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/inbound/handler/ShortenerHandler.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/inbound/handler/ShortenerHandler.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/inbound/handler/WorkerCleansingHandler.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/inbound/handler/WorkerCleansingHandler.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/inbound/handler/WorkerInfoHandler.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/inbound/handler/WorkerInfoHandler.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/inbound/router/ShortenerRouter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/inbound/router/ShortenerRouter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/inbound/router/WorkerCleansingRouter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/inbound/router/WorkerCleansingRouter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/inbound/router/WorkerInfoRouter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/inbound/router/WorkerInfoRouter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/outbound/event/UrlPersistenceEventListener.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/outbound/event/UrlPersistenceEventListener.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/outbound/persistence/R2dbcWorkerIdRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/outbound/persistence/R2dbcWorkerIdRepository.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/outbound/persistence/UrlPersistenceAdapter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/outbound/persistence/UrlPersistenceAdapter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/outbound/persistence/WorkerPersistenceAdapter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/outbound/persistence/WorkerPersistenceAdapter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/outbound/persistence/entity/ShortUrlEntity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/outbound/persistence/entity/ShortUrlEntity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/outbound/persistence/entity/WorkerEntity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/outbound/persistence/entity/WorkerEntity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/outbound/persistence/repository/ShortUrlR2dbcRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/outbound/persistence/repository/ShortUrlR2dbcRepository.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/adapter/outbound/persistence/repository/WorkerRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/adapter/outbound/persistence/repository/WorkerRepository.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/application/event/ShortUrlCreatedEvent.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/application/event/ShortUrlCreatedEvent.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/application/usecase/RetrieveUrlUseCase.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/application/usecase/RetrieveUrlUseCase.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/application/usecase/ShortenUrlUseCase.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/application/usecase/ShortenUrlUseCase.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/application/usecase/worker/WorkerCleansingUseCase.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/application/usecase/worker/WorkerCleansingUseCase.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/application/usecase/worker/WorkerHeartbeatUseCase.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/application/usecase/worker/WorkerHeartbeatUseCase.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/config/CacheConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/config/CacheConfig.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/config/IdGeneratorConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/config/IdGeneratorConfig.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/config/OpenApiConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/config/OpenApiConfig.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/config/SnowflakeProperties.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/config/SnowflakeProperties.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/component/ShortUrlGenerator.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/component/ShortUrlGenerator.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/generator/Base62Encoder.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/generator/Base62Encoder.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/generator/PooledIdGenerator.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/generator/PooledIdGenerator.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/generator/SnowflakeIdGenerator.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/generator/SnowflakeIdGenerator.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/model/LongUrl.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/model/LongUrl.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/model/ShortUrl.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/model/ShortUrl.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/model/UrlMapping.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/model/UrlMapping.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/model/Worker.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/model/Worker.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/model/WorkerStatus.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/model/WorkerStatus.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/port/WorkerIdRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/port/WorkerIdRepository.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/port/outbound/UrlPort.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/port/outbound/UrlPort.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/port/outbound/WorkerPort.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/port/outbound/WorkerPort.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/adapter/inbound/handler/ShortenerHandlerTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/adapter/inbound/handler/ShortenerHandlerTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/adapter/inbound/handler/WorkerCleansingHandlerTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/adapter/inbound/handler/WorkerCleansingHandlerTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/adapter/inbound/handler/WorkerInfoHandlerTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/adapter/inbound/handler/WorkerInfoHandlerTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/application/usecase/RetrieveUrlUseCaseTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/application/usecase/RetrieveUrlUseCaseTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/application/usecase/ShortenUrlUseCaseTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/application/usecase/ShortenUrlUseCaseTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/application/usecase/worker/WorkerCleansingUseCaseTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/application/usecase/worker/WorkerCleansingUseCaseTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/application/usecase/worker/WorkerHeartbeatUseCaseTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/application/usecase/worker/WorkerHeartbeatUseCaseTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/domain/generator/PooledIdGeneratorTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/domain/generator/PooledIdGeneratorTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/domain/generator/ShortUrlGeneratorTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/domain/generator/ShortUrlGeneratorTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/shortener/domain/generator/SnowflakeIdGeneratorTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/snowflake-app/src/test/kotlin/io/dave/snowflake/domain/generator/SnowflakeIdGeneratorTest.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -79,40 +131,41 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Gradle.Build shorten_url.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.Download Sources.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.Tests in 'snowflake.snowflake-app.test'.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.Tests in 'snowflake.snowflake-watcher.test'.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.shorten_url [:SpringApplicationKt.main()].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.shorten_url [:UrlShortenerApplicationKt.main()].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.shorten_url [:com.dave.UrlShortenerApplicationKt.main()].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.shorten_url [:shorten_api:com.example.app.AppKt.main()].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.shorten_url [build].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.shorten_url [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.shortener [:io.dave.shortener.UrlShortenerApplicationKt.main()].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.snowflake [:snowflake-app:io.dave.shortener.UrlShortenerApplicationKt.main()].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.snowflake [build].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.snowflake [check].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.snowflake [classes].executor&quot;: &quot;Run&quot;,
-    &quot;Kotlin.SpringApplicationKt.executor&quot;: &quot;Run&quot;,
-    &quot;Kotlin.UrlShortenerApplicationKt (1).executor&quot;: &quot;Run&quot;,
-    &quot;Kotlin.UrlShortenerApplicationKt.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/dave.pmh/repository/snowflake&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Gradle.Build shorten_url.executor": "Run",
+    "Gradle.Download Sources.executor": "Run",
+    "Gradle.Tests in 'snowflake.snowflake-app.test'.executor": "Run",
+    "Gradle.Tests in 'snowflake.snowflake-watcher.test'.executor": "Run",
+    "Gradle.shorten_url [:SpringApplicationKt.main()].executor": "Run",
+    "Gradle.shorten_url [:UrlShortenerApplicationKt.main()].executor": "Run",
+    "Gradle.shorten_url [:com.dave.UrlShortenerApplicationKt.main()].executor": "Run",
+    "Gradle.shorten_url [:shorten_api:com.example.app.AppKt.main()].executor": "Run",
+    "Gradle.shorten_url [build].executor": "Run",
+    "Gradle.shorten_url [clean].executor": "Run",
+    "Gradle.shortener [:io.dave.shortener.UrlShortenerApplicationKt.main()].executor": "Run",
+    "Gradle.snowflake [:snowflake-app:io.dave.shortener.UrlShortenerApplicationKt.main()].executor": "Run",
+    "Gradle.snowflake [:snowflake-app:io.dave.snowflake.SnowflakeApplicationKt.main()].executor": "Run",
+    "Gradle.snowflake [build].executor": "Run",
+    "Gradle.snowflake [check].executor": "Run",
+    "Gradle.snowflake [classes].executor": "Run",
+    "Kotlin.SpringApplicationKt.executor": "Run",
+    "Kotlin.UrlShortenerApplicationKt (1).executor": "Run",
+    "Kotlin.UrlShortenerApplicationKt.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/dave.pmh/repository/snowflake",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "run.code.analysis.last.selected.profile": "pProject Default",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/snowflake-app/docs/k6" />
@@ -129,7 +182,7 @@
       <recent name="io.dave.shortener.application.util" />
     </key>
   </component>
-  <component name="RunManager" selected="Kotlin.UrlShortenerApplicationPerf">
+  <component name="RunManager" selected="Gradle.Tests in 'snowflake.snowflake-app.test'">
     <configuration name="Tests in 'snowflake.snowflake-app.test'" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -218,8 +271,8 @@
       <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
-    <configuration name="UrlShortenerApplicationPerf" type="JetRunConfigurationType" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="io.dave.shortener.UrlShortenerApplicationKt" />
+    <configuration name="SnowflakeApplicationPerf" type="JetRunConfigurationType" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="io.dave.snowflake.SnowflakeApplicationKt" />
       <module name="snowflake.snowflake-app.main" />
       <shortenClasspath name="NONE" />
       <option name="VM_PARAMETERS" value="-Dspring.profiles.active=alpha,infra,perf" />
@@ -232,14 +285,14 @@
       <item itemvalue="Gradle.shorten_url [clean]" />
       <item itemvalue="Gradle.snowflake [build]" />
       <item itemvalue="Gradle.Tests in 'snowflake.snowflake-app.test'" />
-      <item itemvalue="Kotlin.UrlShortenerApplicationPerf" />
+      <item itemvalue="Kotlin.SnowflakeApplicationPerf" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Gradle.Tests in 'snowflake.snowflake-app.test'" />
         <item itemvalue="Gradle.shorten_url [clean]" />
         <item itemvalue="Gradle.snowflake [classes]" />
-        <item itemvalue="Gradle.Tests in 'snowflake.snowflake-app.test'" />
-        <item itemvalue="Kotlin.UrlShortenerApplicationPerf" />
+        <item itemvalue="Kotlin.SnowflakeApplicationPerf" />
         <item itemvalue="Gradle.snowflake [build]" />
       </list>
     </recent_temporary>
@@ -268,7 +321,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764459857499</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Feat(Perf): Snowflake URL 단축기 성능 최적화 (이벤트 기반, 배치 삽입)&#10;&#10;아키텍처 변경 및 튜닝을 통해 Snowflake URL 단축기 서비스의 성능을 대폭 개선했습니다.&#10;&#10;주요 변경 및 최적화 내용은 다음과 같습니다:&#10;&#10;1. 이벤트 기반 비동기 영속성 도입:&#10;    * Shorten API는 ID 생성 후 ShortUrlCreatedEvent를 발행하고 즉시 응답합니다.&#10;    * UrlPersistenceEventListener는 이벤트를 비동기적으로 배치 처리(500개/100ms)하여 DB 적재 부하를 획기적으로 줄였습니다.&#10;&#10;2. 중복 허용 전략 (No-Check):&#10;    * shorten API에서 longUrl 중복 검사(DB 조회)를 제거하여 동기 DB 조회 병목을 제거하고 응답 시간을 극적으로 단축했습니다. (중복된 longUrl에 대해 새로운 shortUrl이 생성됨)&#10;&#10;3. 인프라 튜닝:&#10;    * R2DBC 연결 풀 (`initial-size`, `max-size` 50) 및 Netty 워커 스레드(`reactor.netty.ioWorkerCount` 16)를 최적화했습니다.&#10;    * long_url 컬럼에 인덱스(`idx_long_url`)를 추가하여 `retrieve` API 성능을 향상했습니다.&#10;&#10;최종 k6 부하 테스트 결과 (200 VU, 2분):&#10;- 평균 응답 시간: 10.25ms (이전 ~800ms 대비)&#10;- 초당 처리량 (TPS): 4550+ req/s (이전 ~125 req/s 대비 약 36배 증가)&#10;&#10;Docs: ARCHITECTURE.md, sequence_diagram.puml 등 관련 문서 현행화">
+      <option name="closed" value="true" />
+      <created>1764472513889</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1764472513889</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -285,7 +346,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="tt" />
     <MESSAGE value="Refactor(snowflake) : 생성성능 개선" />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor(snowflake) : 생성성능 개선" />
+    <MESSAGE value="Feat(Perf): Snowflake URL 단축기 성능 최적화 (이벤트 기반, 배치 삽입)&#10;&#10;아키텍처 변경 및 튜닝을 통해 Snowflake URL 단축기 서비스의 성능을 대폭 개선했습니다.&#10;&#10;주요 변경 및 최적화 내용은 다음과 같습니다:&#10;&#10;1. 이벤트 기반 비동기 영속성 도입:&#10;    * Shorten API는 ID 생성 후 ShortUrlCreatedEvent를 발행하고 즉시 응답합니다.&#10;    * UrlPersistenceEventListener는 이벤트를 비동기적으로 배치 처리(500개/100ms)하여 DB 적재 부하를 획기적으로 줄였습니다.&#10;&#10;2. 중복 허용 전략 (No-Check):&#10;    * shorten API에서 longUrl 중복 검사(DB 조회)를 제거하여 동기 DB 조회 병목을 제거하고 응답 시간을 극적으로 단축했습니다. (중복된 longUrl에 대해 새로운 shortUrl이 생성됨)&#10;&#10;3. 인프라 튜닝:&#10;    * R2DBC 연결 풀 (`initial-size`, `max-size` 50) 및 Netty 워커 스레드(`reactor.netty.ioWorkerCount` 16)를 최적화했습니다.&#10;    * long_url 컬럼에 인덱스(`idx_long_url`)를 추가하여 `retrieve` API 성능을 향상했습니다.&#10;&#10;최종 k6 부하 테스트 결과 (200 VU, 2분):&#10;- 평균 응답 시간: 10.25ms (이전 ~800ms 대비)&#10;- 초당 처리량 (TPS): 4550+ req/s (이전 ~125 req/s 대비 약 36배 증가)&#10;&#10;Docs: ARCHITECTURE.md, sequence_diagram.puml 등 관련 문서 현행화" />
+    <option name="LAST_COMMIT_MESSAGE" value="Feat(Perf): Snowflake URL 단축기 성능 최적화 (이벤트 기반, 배치 삽입)&#10;&#10;아키텍처 변경 및 튜닝을 통해 Snowflake URL 단축기 서비스의 성능을 대폭 개선했습니다.&#10;&#10;주요 변경 및 최적화 내용은 다음과 같습니다:&#10;&#10;1. 이벤트 기반 비동기 영속성 도입:&#10;    * Shorten API는 ID 생성 후 ShortUrlCreatedEvent를 발행하고 즉시 응답합니다.&#10;    * UrlPersistenceEventListener는 이벤트를 비동기적으로 배치 처리(500개/100ms)하여 DB 적재 부하를 획기적으로 줄였습니다.&#10;&#10;2. 중복 허용 전략 (No-Check):&#10;    * shorten API에서 longUrl 중복 검사(DB 조회)를 제거하여 동기 DB 조회 병목을 제거하고 응답 시간을 극적으로 단축했습니다. (중복된 longUrl에 대해 새로운 shortUrl이 생성됨)&#10;&#10;3. 인프라 튜닝:&#10;    * R2DBC 연결 풀 (`initial-size`, `max-size` 50) 및 Netty 워커 스레드(`reactor.netty.ioWorkerCount` 16)를 최적화했습니다.&#10;    * long_url 컬럼에 인덱스(`idx_long_url`)를 추가하여 `retrieve` API 성능을 향상했습니다.&#10;&#10;최종 k6 부하 테스트 결과 (200 VU, 2분):&#10;- 평균 응답 시간: 10.25ms (이전 ~800ms 대비)&#10;- 초당 처리량 (TPS): 4550+ req/s (이전 ~125 req/s 대비 약 36배 증가)&#10;&#10;Docs: ARCHITECTURE.md, sequence_diagram.puml 등 관련 문서 현행화" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -300,9 +362,9 @@
           <option name="timeStamp" value="1" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="kotlin-function">
-          <url>file://$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/shortener/domain/port/outbound/WorkerPort.kt</url>
+          <url>file://$PROJECT_DIR$/snowflake-app/src/main/kotlin/io/dave/snowflake/domain/port/outbound/WorkerPort.kt</url>
           <line>10</line>
-          <properties class="io.dave.shortener.domain.port.outbound.WorkerPort" method="updateUpdatedAt">
+          <properties class="io.dave.snowflake.domain.port.outbound.WorkerPort" method="updateUpdatedAt">
             <option name="EMULATED" value="true" />
             <option name="WATCH_EXIT" value="false" />
           </properties>

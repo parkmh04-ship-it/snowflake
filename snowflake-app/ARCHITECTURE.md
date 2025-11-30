@@ -51,7 +51,7 @@
 ## 4. 디렉토리 구조 (Directory Structure)
 
 ```text
-io.dave.shortener
+io.dave.snowflake
 ├── adapter                  # [Infrastructure Layer]
 │   ├── inbound              # 외부 요청 처리
 │   │   ├── dto              # Request/Response DTOs
