@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel target="21" />
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="shorten_url" options="-parameters" />
+      <module name="shorten_url.main" options="-parameters" />
+      <module name="shorten_url.test" options="-parameters" />
+      <module name="shortener" options="-parameters" />
+      <module name="shortener.main" options="-parameters" />
+      <module name="shortener.test" options="-parameters" />
+    </option>
+  </component>
+</project>
