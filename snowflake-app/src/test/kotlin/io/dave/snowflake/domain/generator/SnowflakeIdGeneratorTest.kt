@@ -70,33 +70,4 @@ class SnowflakeIdGeneratorTest {
         val ids = deferredIds.awaitAll().toSet()
         assertEquals(count, ids.size)
     }
-
-    @Test
-    @DisplayName("시퀀스가 고갈되면 메트릭 카운터가 증가한다")
-    fun `exhaustion counter should increment when sequence exhausted`() = runTest {
-        val fixedTime = 1000L
-        // TimeSource: 처음에는 고정된 시간을 반환하다가, 일정 횟수 이상 호출되면(고갈 후 대기 상황) 시간을 증가시켜 무한 루프 방지
-        var callCount = 0
-        val timeSource: () -> Long = {
-            callCount++
-            // 4096(시퀀스 생성) + 알파(tilNextMillis 내부 루프) 이후에는 시간 증가
-            if (callCount > 5000) fixedTime + 1 else fixedTime
-        }
-
-        val testRegistry = SimpleMeterRegistry()
-        val testGenerator = SnowflakeIdGenerator(1L, testRegistry, timeSource)
-
-        // 4096번 호출 (Max Sequence 도달)
-        repeat(4096) {
-            testGenerator.nextId()
-        }
-
-        // 아직 고갈 안 됨 (시퀀스 0 ~ 4095 사용 완료)
-        assertEquals(0.0, testRegistry.counter("snowflake.sequence.exhaustion.total", "workerId", "1").count())
-
-        // 4097번째 호출 -> 시퀀스 오버플로우로 0 초기화 시도 -> 고갈 판정 -> 카운터 증가 -> tilNextMillis 진입 -> 시간 증가 후 리턴
-        testGenerator.nextId()
-
-        assertEquals(1.0, testRegistry.counter("snowflake.sequence.exhaustion.total", "workerId", "1").count())
-    }
 }

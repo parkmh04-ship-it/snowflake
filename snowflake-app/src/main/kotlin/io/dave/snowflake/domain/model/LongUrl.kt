@@ -4,8 +4,13 @@ package io.dave.snowflake.domain.model
 data class LongUrl(val value: String) {
     init {
         require(value.isNotBlank()) { "URL은 비어있을 수 없습니다" }
+        require(value.length <= MAX_URL_LENGTH) { "URL은 ${MAX_URL_LENGTH}자를 초과할 수 없습니다" }
         require(value.startsWith("http://") || value.startsWith("https://")) {
             "URL은 http:// 또는 https://로 시작해야 합니다"
         }
+    }
+
+    companion object {
+        const val MAX_URL_LENGTH = 2048
     }
 }

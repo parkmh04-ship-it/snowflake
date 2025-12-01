@@ -4,6 +4,7 @@ import io.dave.snowflake.domain.generator.Base62Encoder
 import io.dave.snowflake.domain.generator.PooledIdGenerator
 import io.dave.snowflake.domain.model.ShortUrl
 import io.dave.snowflake.domain.port.outbound.UrlPort
+import io.micrometer.core.annotation.Timed // @Timed import 추가
 import org.springframework.stereotype.Service
 import kotlin.random.Random
 
@@ -15,6 +16,7 @@ import kotlin.random.Random
 class ShortUrlGenerator(
     private val idGenerator: PooledIdGenerator,
     private val urlPort: UrlPort,
+    // MeterRegistry 주입 제거
     private val random: Random = Random(System.currentTimeMillis())
 ) {
     private val alphabet = Base62Encoder.ALPHABET
@@ -27,6 +29,7 @@ class ShortUrlGenerator(
      *
      * @return 고유하게 생성된 ShortUrl 객체.
      */
+    @Timed("snowflake.id.generation.time.seconds", description = "Time taken to generate a Snowflake ID") // @Timed 어노테이션 추가
     suspend fun generate(): ShortUrl {
         var shortUrlString: String
         var isUnique = false

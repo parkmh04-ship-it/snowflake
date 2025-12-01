@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.springBoot)
     alias(libs.plugins.kotlinSpring)
     alias(libs.plugins.spotless)
+    kotlin("kapt")
     jacoco
 }
 
@@ -23,8 +24,16 @@ dependencies {
     implementation(libs.kotlin.reflect)
     implementation(libs.spring.boot.starter.cache)
     implementation(libs.kaffeine)
-    implementation(libs.spring.boot.starter.data.r2dbc)
-    implementation(libs.r2dbcMariadb)
+    
+    // JPA & QueryDSL
+    implementation(libs.spring.boot.starter.data.jpa)
+    implementation(libs.spring.boot.starter.data.jpa)
+    implementation(libs.mysql.connector.j)
+    implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
+    kapt("com.querydsl:querydsl-apt:5.1.0:jakarta")
+    kapt("jakarta.annotation:jakarta.annotation-api:2.1.1")
+    kapt("jakarta.persistence:jakarta.persistence-api:3.1.0")
+
     implementation(libs.springdoc.openapi.starter.webflux.ui)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.micrometer.registry.prometheus)

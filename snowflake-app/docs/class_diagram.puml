@@ -1,7 +1,9 @@
 @startuml
-' 스타일 설정
 skinparam classAttributeIconSize 0
 skinparam componentStyle uml2
+skinparam linetype ortho
+
+title Snowflake URL Shortener - Class Diagram (Hexagonal & DDD)
 
 ' --- Domain Layer ---
 package "Domain" {
@@ -18,11 +20,12 @@ package "Domain" {
             +createdAt: Long
         }
         class Worker {
-            +id: Long
+            +id: Long?
             +workerNum: Long
             +workerName: String
             +status: WorkerStatus
-            +updatedAt: LocalDateTime
+            +createdAt: LocalDateTime?
+            +updatedAt: LocalDateTime?
         }
         enum WorkerStatus {
             ACTIVE
@@ -32,32 +35,60 @@ package "Domain" {
 
     package "Port (Outbound)" {
         interface UrlPort {
-            +save(UrlMapping): UrlMapping
-            +findByShortUrl(ShortUrl): UrlMapping?
-            +findByLongUrl(LongUrl): UrlMapping?
-            +existsByShortUrl(ShortUrl): Boolean
+            +save(mapping: UrlMapping): UrlMapping
+            +saveAll(mappings: Flow<UrlMapping>): Flow<UrlMapping>
+            +findByShortUrl(shortUrl: ShortUrl): UrlMapping?
+            +findByLongUrl(longUrl: LongUrl): UrlMapping?
+            +existsByShortUrl(shortUrl: ShortUrl): Boolean
         }
         interface WorkerPort {
-            +findByWorkerNums(List<Long>): Flow<Worker>
-            +findByStatusAndUpdatedAtBefore(WorkerStatus, LocalDateTime): Flow<Worker>
-            +updateUpdatedAt(List<Long>, LocalDateTime): Int
-            +cleanseWorkers(List<Long>, LocalDateTime): Int
-            +saveAll(Flow<Worker>): Flow<Worker>
+            +findByWorkerNums(workerNums: List<Long>): Flow<Worker>
+            +findByStatusAndUpdatedAtBefore(status: WorkerStatus, updatedAt: LocalDateTime): Flow<Worker>
+            +updateUpdatedAt(workerNums: List<Long>, updatedAt: LocalDateTime): Int
+            +cleanseWorkers(workerNums: List<Long>, updatedAt: LocalDateTime): Int
+            +saveAll(workers: Flow<Worker>): Flow<Worker>
+        }
+        interface WorkerIdRepository {
+            +assignWorkerIds(instanceId: String, requiredCount: Int): List<Long>
         }
     }
 
     package "Component/Generator" {
         class ShortUrlGenerator <<Service>> {
+            -idGenerator: PooledIdGenerator
+            -urlPort: UrlPort
+            -random: Random
             +generate(): ShortUrl
         }
+        interface IdGenerator {
+            +nextId(): Long
+        }
         class SnowflakeIdGenerator {
+            -workerId: Long
+            -timeSource: Supplier<Long>
+            -lastTimestamp: Long
+            -sequence: Long
+            -mutex: Mutex
+            -workerIdBits: Long
+            -sequenceBits: Long
+            -maxWorkerId: Long
+            -maxSequence: Long
+            -workerIdShift: Long
+            -timestampLeftShift: Long
             +nextId(): Long
         }
         class Base62Encoder {
-            {static} +encode(Long): String
+            {static} +ALPHABET: String
+            {static} +encode(id: Long): String
         }
-        class PooledIdGenerator {
-            +PooledIdGenerator(List<SnowflakeIdGenerator>, MeterRegistry)
+        class PooledIdGenerator  {
+             -idGenerators: List<IdGenerator>
+             -index: AtomicInteger
+             +nextId(): Long
+        }
+        class MonitoredIdGenerator {
+            -delegate: IdGenerator
+            -timer: Timer
             +nextId(): Long
         }
     }
@@ -65,18 +96,32 @@ package "Domain" {
 
 ' --- Application Layer ---
 package "Application" {
+    package "Event" {
+        class ShortUrlCreatedEvent {
+            +shortUrl: ShortUrl
+            +longUrl: LongUrl
+            +createdAt: Long
+        }
+    }
+    
     package "Usecase" {
         class ShortenUrlUseCase <<Usecase>> {
-            +shorten(String): UrlMapping
+            -urlPort: UrlPort
+            -shortUrlGenerator: ShortUrlGenerator
+            -eventPublisher: ApplicationEventPublisher
+            +shorten(longUrlStr: String): UrlMapping
         }
         class RetrieveUrlUseCase <<Usecase>> {
-            +retrieve(String): UrlMapping?
+            -urlPort: UrlPort
+            +retrieve(shortUrlStr: String): UrlMapping?
         }
         class WorkerCleansingUseCase <<Usecase>> {
+            -workerPort: WorkerPort
             +cleanseIdleWorkers(): Int
         }
         class WorkerHeartbeatUseCase <<Usecase>> {
-            +heartbeat(Long): Int
+            -workerPort: WorkerPort
+            +heartbeat(workerNum: Long): Int
         }
     }
 }
@@ -85,56 +130,122 @@ package "Application" {
 package "Adapter" {
     package "Inbound (Web)" {
         class ShortenerHandler <<Component>> {
-            +shorten(ServerRequest): ServerResponse
-            +redirect(ServerRequest): ServerResponse
+            -shortenUrlUseCase: ShortenUrlUseCase
+            -retrieveUrlUseCase: RetrieveUrlUseCase
+            -baseUrl: String
+            -shortenPathPrefix: String
+            +shorten(request: ServerRequest): ServerResponse
+            +redirect(request: ServerRequest): ServerResponse
+            +health(request: ServerRequest): ServerResponse
+            +ping(request: ServerRequest): ServerResponse
         }
         class WorkerInfoHandler <<Component>> {
-            +getActiveWorkers(ServerRequest): ServerResponse
+            -assignedWorkerInfo: AssignedWorkerInfo
+            +getActiveWorkers(request: ServerRequest): ServerResponse
+        }
+        class WorkerCleansingHandler <<Component>> {
+            -workerCleansingUseCase: WorkerCleansingUseCase
+            +cleanseWorkers(request: ServerRequest): ServerResponse
         }
     }
 
     package "Outbound (Persistence)" {
-        class UrlPersistenceAdapter <<Repository>> {
+        class UrlPersistenceAdapter <<Repository>>  {
+            -repository: ShortUrlRepository
+            +save(mapping: UrlMapping): UrlMapping
+            +saveAll(mappings: Flow<UrlMapping>): Flow<UrlMapping>
+            +findByShortUrl(shortUrl: ShortUrl): UrlMapping?
+            +findByLongUrl(longUrl: LongUrl): UrlMapping?
+            +existsByShortUrl(shortUrl: ShortUrl): Boolean
         }
-        class WorkerPersistenceAdapter <<Repository>> {
+        class WorkerPersistenceAdapter <<Repository>>  {
+            -workerRepository: WorkerRepository
+            +findByWorkerNums(workerNums: List<Long>): Flow<Worker>
+            +findByStatusAndUpdatedAtBefore(status: WorkerStatus, updatedAt: LocalDateTime): Flow<Worker>
+            +updateUpdatedAt(workerNums: List<Long>, updatedAt: LocalDateTime): Int
+            +cleanseWorkers(workerNums: List<Long>, updatedAt: LocalDateTime): Int
+            +saveAll(workers: Flow<Worker>): Flow<Worker>
         }
-        
-        interface ShortUrlR2dbcRepository <<Spring Data>>
+        class JpaWorkerIdRepository <<Repository>>  {
+            -workerRepository: WorkerRepository
+            +assignWorkerIds(instanceId: String, requiredCount: Int): List<Long>
+        }
+
+        interface ShortUrlRepository <<Spring Data>> {
+            +findByShortUrl(shortUrl: String): ShortUrlEntity?
+            +findByLongUrl(longUrl: String): ShortUrlEntity?
+        }
         interface WorkerRepository <<Spring Data>> {
-            +cleanseWorkers(List<Long>, LocalDateTime): Int
+            +findByWorkerNumIn(workerNums: List<Long>): List<WorkerEntity>
+            +findByStatusAndUpdatedAtBefore(status: WorkerStatus, updatedAt: LocalDateTime): List<WorkerEntity>
+            +updateUpdatedAtByWorkerNums(workerNums: List<Long>, updatedAt: LocalDateTime): Int
+            +cleanseWorkers(workerNums: List<Long>, updatedAt: LocalDateTime): Int
         }
+    }
+    
+    package "Outbound (Event)" {
+        class UrlPersistenceEventListener <<Component>> {
+            -urlPort: UrlPort
+            -cacheManager: CacheManager
+            -eventChannel: Channel<ShortUrlCreatedEvent>
+            +handleShortUrlCreatedEvent(event: ShortUrlCreatedEvent): Unit
+            -flush(batch: List<UrlMapping>): Unit
+        }
+    }
+}
+
+' --- Config ---
+package "Config" {
+    class AssignedWorkerInfo {
+        +instanceId: String
+        +workerIds: List<Long>
     }
 }
 
 ' --- Relationships ---
 
-' Application -> Domain
-ShortenUrlUseCase --> ShortUrlGenerator : uses
+' Application Layer depends on Domain Layer (Ports and Components)
 ShortenUrlUseCase --> UrlPort : uses
+ShortenUrlUseCase --> ShortUrlGenerator : uses
+ShortenUrlUseCase ..> ShortUrlCreatedEvent : publishes
 RetrieveUrlUseCase --> UrlPort : uses
 WorkerCleansingUseCase --> WorkerPort : uses
 WorkerHeartbeatUseCase --> WorkerPort : uses
 
-' Domain Internal
+' Domain Layer components usage
 ShortUrlGenerator --> PooledIdGenerator : uses
 ShortUrlGenerator --> Base62Encoder : uses
-ShortUrlGenerator --> UrlPort : uses (check existence)
-PooledIdGenerator --> SnowflakeIdGenerator : uses
+ShortUrlGenerator --> UrlPort : uses
+PooledIdGenerator --> IdGenerator : uses
+MonitoredIdGenerator --> IdGenerator : delegates to
+IdGenerator <|.. SnowflakeIdGenerator
+IdGenerator <|.. PooledIdGenerator
+IdGenerator <|.. MonitoredIdGenerator
+
 UrlMapping *-- ShortUrl
 UrlMapping *-- LongUrl
 Worker *-- WorkerStatus
+ShortUrlCreatedEvent *-- ShortUrl
+ShortUrlCreatedEvent *-- LongUrl
 
-' Adapter (Inbound) -> Application
+' Adapter Layer depends on Application Layer (Use Cases) and Domain Layer (Ports)
 ShortenerHandler --> ShortenUrlUseCase : uses
 ShortenerHandler --> RetrieveUrlUseCase : uses
-WorkerInfoHandler ..> AssignedWorkerInfo : uses (Config)
+WorkerInfoHandler --> AssignedWorkerInfo : uses
+WorkerCleansingHandler --> WorkerCleansingUseCase : uses
 
-' Adapter (Outbound) -> Domain Port (Implementation)
+' Event Listener
+UrlPersistenceEventListener ..> ShortUrlCreatedEvent : listens
+UrlPersistenceEventListener --> UrlPort : uses
+
+' Adapter Layer (Outbound) implements Domain Ports
 UrlPersistenceAdapter ..|> UrlPort
 WorkerPersistenceAdapter ..|> WorkerPort
+JpaWorkerIdRepository ..|> WorkerIdRepository
 
-' Adapter (Outbound) -> Spring Data
-UrlPersistenceAdapter --> ShortUrlR2dbcRepository
+' Adapter Layer (Outbound) uses Persistence mechanisms (Spring Data Repositories)
+UrlPersistenceAdapter --> ShortUrlRepository
 WorkerPersistenceAdapter --> WorkerRepository
+JpaWorkerIdRepository --> WorkerRepository
 
 @enduml

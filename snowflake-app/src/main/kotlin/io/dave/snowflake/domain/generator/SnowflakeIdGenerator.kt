@@ -1,10 +1,7 @@
 package io.dave.snowflake.domain.generator
 
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-
 
 /**
  * 분산 환경에서 유일한 ID를 생성하기 위한 Snowflake ID 생성기 구현체.
@@ -25,9 +22,8 @@ import kotlinx.coroutines.sync.withLock
  */
 class SnowflakeIdGenerator(
     private val workerId: Long,
-    meterRegistry: MeterRegistry? = null,
     private val timeSource: () -> Long = System::currentTimeMillis
-) {
+) : IdGenerator {
 
     /** 마지막으로 ID를 생성한 타임스탬프 (밀리초 단위) */
     private var lastTimestamp = -1L
@@ -51,13 +47,6 @@ class SnowflakeIdGenerator(
     /** 타임스탬프를 가장 상위 비트로 이동시키기 위한 시프트 값 */
     private val timestampLeftShift = sequenceBits + workerIdBits
 
-    private val exhaustionCounter = meterRegistry?.let {
-        Counter.builder("snowflake.sequence.exhaustion.total")
-            .description("Total number of times the sequence was exhausted in a millisecond")
-            .tag("workerId", workerId.toString())
-            .register(it)
-    }
-
     init {
         require(workerId in 0..maxWorkerId) { "Worker ID must be between 0 and $maxWorkerId" }
     }
@@ -72,7 +61,7 @@ class SnowflakeIdGenerator(
      * @return 생성된 유일한 64비트 Snowflake ID.
      * @throws RuntimeException 클럭이 뒤로 이동했을 경우 발생.
      */
-    suspend fun nextId(): Long = mutex.withLock {
+    override suspend fun nextId(): Long = mutex.withLock {
         var currentTimestamp = timeGen()
 
         if (currentTimestamp < lastTimestamp) {
@@ -83,7 +72,6 @@ class SnowflakeIdGenerator(
             // 동일 밀리초 내에서 시퀀스 증가. 최대 시퀀스에 도달하면 다음 밀리초로 넘어감.
             sequence = (sequence + 1) and maxSequence
             if (sequence == 0L) {
-                exhaustionCounter?.increment()
                 currentTimestamp = tilNextMillis(lastTimestamp)
             }
         } else {

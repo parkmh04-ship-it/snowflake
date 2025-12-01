@@ -1,14 +1,27 @@
 package io.dave.snowflake.adapter.outbound.persistence.entity
 
-import org.springframework.data.annotation.Id
-import org.springframework.data.relational.core.mapping.Table
+import jakarta.persistence.*
+import org.springframework.data.annotation.CreatedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 
-@Table("shortener_history")
-data class ShortUrlEntity(
+@Entity
+@Table(name = "shortener_history")
+@EntityListeners(AuditingEntityListener::class)
+class ShortUrlEntity(
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
+
+    @Column(nullable = false, unique = true)
     val shortUrl: String,
+
+    @Column(nullable = false, length = 2048)
     val longUrl: String,
-    val createdAt: LocalDateTime? = null
-)
+
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    var createdAt: LocalDateTime? = null
+) {
+    protected constructor() : this(null, "", "", null)
+}

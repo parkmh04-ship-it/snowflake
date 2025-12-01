@@ -10,16 +10,22 @@ box "Adapter (Inbound) - WebFlux" #LightBlue
     participant "ShortenerHandler" as Handler
 end box
 
-box "Application - Usecase" #LightYellow
+box "Application Layer - Usecase" #LightYellow
     participant "ShortenUrlUseCase" as ShortenUseCase
     participant "RetrieveUrlUseCase" as RetrieveUseCase
     participant "WorkerCleansingUseCase" as CleansingUseCase
+    participant "WorkerHeartbeatUseCase" as HeartbeatUseCase
 end box
 
 box "Domain Layer - Core Logic" #LightGreen
     participant "ShortUrlGenerator" as Generator
     participant "PooledIdGenerator" as IdGen
     participant "Base62Encoder" as Encoder
+end box
+
+box "Ports (Hexagonal - Outbound)" #Orange
+    participant "UrlPort" as UrlPort
+    participant "WorkerPort" as WorkerPort
 end box
 
 box "Adapter (Outbound) - Persistence" #LightPink
@@ -29,294 +35,186 @@ end box
 
 database "MariaDB (R2DBC)" as DB
 
-== 시나리오 1: 단축 URL 생성 (Shorten URL) ==
-
-note over Client, Handler
-  사용자가 원본 URL을 JSON 형태로 전송합니다.
-  (예: https://example.com)
-end note
+== Scenario 1: Shorten URL ==
 
 Client -> Handler: POST /shorten { "url": "..." }
 activate Handler
+note right of Handler: [Inbound Adapter]\nHandles incoming web requests.
 
-note right of Handler
-  [Inbound Adapter]
-  웹 요청을 받아 유효성을 검증하고
-  애플리케이션 서비스로 위임합니다.
-end note
-
-Handler -> ShortenUseCase: shorten("https://example.com")
-
+Handler -> ShortenUseCase: shorten(longUrl)
 activate ShortenUseCase
+note right of ShortenUseCase: [Application Service]\nOrchestrates domain logic, manages transactions.
 
-
-note right of ShortenUseCase
-
-  [Application Service]
-
-  트랜잭션 관리 및 유스케이스 흐름 제어.
-
-  먼저 원본 URL이 이미 존재하는지 확인합니다.
-
-end note
-
-
-ShortenUseCase -> UrlAdapter: findByLongUrl("https://example.com")
-
+' Use Case interacts with the Port, not directly with the adapter implementation.
+ShortenUseCase -> UrlPort: findByLongUrl(longUrl)
+activate UrlPort
+' Port delegates to its implementing Adapter.
+UrlPort -> UrlAdapter: findByLongUrl(longUrl)
 activate UrlAdapter
-
 UrlAdapter -> DB: SELECT * FROM urls WHERE long_url = ?
-
 activate DB
-
-DB --> UrlAdapter: (null 또는 기존 매핑 정보)
-
+DB --> UrlAdapter: (null or existing mapping)
 deactivate DB
-
-UrlAdapter --> ShortenUseCase: (null)
-
+UrlAdapter --> UrlPort: (null or existing mapping)
 deactivate UrlAdapter
+UrlPort --> ShortenUseCase: (null or existing mapping)
+deactivate UrlPort
 
-
-alt 이미 등록된 URL인 경우 (Long URL exists)
-
-    note right of ShortenUseCase
-
-      이미 등록된 URL이면 새로 생성하지 않고
-
-      기존 정보를 반환합니다 (Idempotency).
-
-    end note
-
-    ShortenUseCase --> Handler: 기존 UrlMapping 반환
-
-else 신규 URL인 경우 (New URL)
-
-    note right of ShortenUseCase
-
-      새로운 URL이므로 단축 URL 생성을
-
-      도메인 생성기(Generator)에 요청합니다.
-
-    end note
-
+alt New URL
     ShortenUseCase -> Generator: generate()
-
     activate Generator
-
-    
-
-    loop 충돌 없을 때까지 반복 (Until unique)
-
-        note right of Generator
-
-          [Domain Service]
-
-          Snowflake ID를 생성하고 Base62로 인코딩하여
-
-          고유한 단축 키를 만듭니다.
-
-        end note
-
-        
-
-        Generator -> IdGen: nextId()
-
-        activate IdGen
-
-        IdGen --> Generator: Snowflake ID (Long)
-
-        deactivate IdGen
-
-        
-
-        Generator -> Encoder: encode(ID)
-
-        activate Encoder
-
-        Encoder --> Generator: "ShortStr"
-
-        deactivate Encoder
-
-        
-
-        Generator -> UrlAdapter: existsByShortUrl("ShortStr")
-
-        activate UrlAdapter
-
-        UrlAdapter -> DB: EXISTS(...)
-
-        activate DB
-
-        DB --> UrlAdapter: false (미존재 확인)
-
-        deactivate DB
-
-        UrlAdapter --> Generator: false
-
-        deactivate UrlAdapter
-
-    end
-
-    
-
-    Generator --> ShortenUseCase: 생성된 ShortUrl("ShortStr")
-
+    note right of Generator: [Domain Service]\nGenerates a unique short URL.
+    Generator -> IdGen: nextId()
+    activate IdGen
+    IdGen --> Generator: Snowflake ID
+    deactivate IdGen
+    Generator -> Encoder: encode(ID)
+    activate Encoder
+    Encoder --> Generator: Short String Key
+    deactivate Encoder
+    ' Check for short URL existence via Port
+    Generator -> UrlPort: existsByShortUrl(shortKey)
+    activate UrlPort
+    UrlPort -> UrlAdapter: existsByShortUrl(shortKey)
+    activate UrlAdapter
+    UrlAdapter -> DB: EXISTS(...)
+    activate DB
+    DB --> UrlAdapter: false
+    deactivate DB
+    UrlAdapter --> UrlPort: false
+    deactivate UrlAdapter
+    UrlPort --> Generator: false
+    deactivate UrlPort
+    Generator --> ShortenUseCase: Generated Short URL
     deactivate Generator
 
-    
-
-    note right of ShortenUseCase
-
-      도메인 객체(UrlMapping)를 생성하여
-
-      영속성 어댑터를 통해 저장합니다.
-
-    end note
-
-    
-
-    ShortenUseCase -> UrlAdapter: save(UrlMapping)
-
+    note right of ShortenUseCase: Creates domain object (UrlMapping) and saves it via Port.
+    ShortenUseCase -> UrlPort: save(urlMapping)
+    activate UrlPort
+    UrlPort -> UrlAdapter: save(urlMapping)
     activate UrlAdapter
-
     UrlAdapter -> DB: INSERT INTO urls ...
-
     activate DB
-
-    DB --> UrlAdapter: 성공
-
+    DB --> UrlAdapter: Success
     deactivate DB
-
-    UrlAdapter --> ShortenUseCase: 저장된 UrlMapping
-
+    UrlAdapter --> UrlPort: Saved UrlMapping
     deactivate UrlAdapter
-
+    UrlPort --> ShortenUseCase: Saved UrlMapping
+    deactivate UrlPort
+else Existing URL
+    ' ShortenUseCase already received existing mapping from UrlPort
 end
 
-
-
-ShortenUseCase --> Handler: UrlMapping 결과
-
+ShortenUseCase --> Handler: UrlMapping result
 deactivate ShortenUseCase
 
 Handler --> Client: 201 Created { "shortUrl": "..." }
-
 deactivate Handler
 
+== Scenario 2: Retrieve URL and Redirect ==
 
-
-== 시나리오 2: 단축 URL 조회 및 리다이렉트 (Retrieve URL) ==
-
-
-
-note over Client, Handler
-
-  사용자가 단축된 키(Short URL)로 접근합니다.
-
-end note
-
-
-
-Client -> Handler: GET /shorten/{shortUrl}
-
+Client -> Handler: GET /{shortKey}
 activate Handler
+note right of Handler: [Inbound Adapter]\nHandles short URL lookup.
 
-
-
-Handler -> RetrieveUseCase: retrieve("shortUrl")
-
+Handler -> RetrieveUseCase: retrieve(shortKey)
 activate RetrieveUseCase
+note right of RetrieveUseCase: [Application Service]\nRetrieves original URL.
 
-
-
-RetrieveUseCase -> UrlAdapter: findByShortUrl("shortUrl")
-
+RetrieveUseCase -> UrlPort: findByShortUrl(shortKey)
+activate UrlPort
+UrlPort -> UrlAdapter: findByShortUrl(shortKey)
 activate UrlAdapter
-
 UrlAdapter -> DB: SELECT * FROM urls WHERE short_url = ?
-
 activate DB
-
-DB --> UrlAdapter: 조회 결과 (Row)
-
+DB --> UrlAdapter: Row data
 deactivate DB
-
-UrlAdapter --> RetrieveUseCase: UrlMapping? (Nullable)
-
+UrlAdapter --> UrlPort: UrlMapping? (Nullable)
 deactivate UrlAdapter
-
-
+UrlPort --> RetrieveUseCase: UrlMapping? (Nullable)
+deactivate UrlPort
 
 RetrieveUseCase --> Handler: UrlMapping?
-
 deactivate RetrieveUseCase
 
-alt 단축 URL이 존재하는 경우 (Found)
-
-    note right of Handler
-
-      조회된 원본 URL로 302 리다이렉트 응답을 보냅니다.
-
-    end note
-
-    Handler --> Client: 302 Found (Location: "https://example.com")
-
-else 존재하지 않는 경우 (Not Found)
-
-    note right of Handler
-
-      해당하는 단축 URL이 없으므로 404 에러를 반환합니다.
-
-    end note
-
+alt URL Found
+    note right of Handler: [Inbound Adapter]\nResponds with 302 Redirect.
+    Handler --> Client: 302 Found (Location: "originalUrl")
+else Not Found
+    note right of Handler: [Inbound Adapter]\nResponds with 404 Not Found.
     Handler --> Client: 404 Not Found
-
 end
-
-
-
 deactivate Handler
 
-== 시나리오 3: 유휴 워커 정리 (Cleanse Idle Workers) ==
 
-note over Scheduler, CleansingUseCase
-  스케줄러가 주기적으로 유휴 워커 정리를 요청합니다.
-end note
+== Scenario 3: Cleanse Idle Workers ==
 
+note over Scheduler, CleansingUseCase: Scheduled task to clean up idle workers.
 Scheduler -> CleansingUseCase: cleanseIdleWorkers()
 activate CleansingUseCase
+note right of CleansingUseCase: [Application Service]\nFinds workers inactive for > 5 minutes.
 
-note right of CleansingUseCase
-  [Application Service]
-  5분 이상 업데이트되지 않은 ACTIVE 워커를 조회합니다.
-end note
-
-CleansingUseCase -> WorkerAdapter: findByStatusAndUpdatedAtBefore(ACTIVE, 5_minutes_ago)
+CleansingUseCase -> WorkerPort: findInactiveWorkers(threshold)
+activate WorkerPort
+WorkerPort -> WorkerAdapter: findInactiveWorkers(threshold)
 activate WorkerAdapter
 WorkerAdapter -> DB: SELECT * FROM snowflake_workers WHERE status = 'ACTIVE' AND updated_at < :threshold
 activate DB
 DB --> WorkerAdapter: Flow<WorkerEntity>
 deactivate DB
-WorkerAdapter --> CleansingUseCase: Flow<Worker>
+WorkerAdapter --> WorkerPort: Flow<Worker>
 deactivate WorkerAdapter
+WorkerPort --> CleansingUseCase: Flow<Worker>
+deactivate WorkerPort
 
-alt 조회된 유휴 워커가 있는 경우
-    CleansingUseCase -> WorkerAdapter: cleanseWorkers(workerNums, now())
+alt Idle Workers Found
+    note right of CleansingUseCase: [Application Service]\nUpdates status of found workers via Port.
+    CleansingUseCase -> WorkerPort: cleanseWorkers(workerIds, newStatus)
+    activate WorkerPort
+    WorkerPort -> WorkerAdapter: cleanseWorkers(workerIds, newStatus)
     activate WorkerAdapter
-    WorkerAdapter -> DB: UPDATE snowflake_workers SET status = 'IDLE', worker_name = 'NONE', updated_at = NOW() WHERE worker_num IN (:workerNums)
+    WorkerAdapter -> DB: UPDATE snowflake_workers SET ... WHERE worker_id IN (...)
     activate DB
-    DB --> WorkerAdapter: UpdatedCount
+    DB --> WorkerAdapter: Update count
     deactivate DB
-    WorkerAdapter --> CleansingUseCase: UpdatedCount
+    WorkerAdapter --> WorkerPort: Update count
     deactivate WorkerAdapter
-else 조회된 유휴 워커가 없는 경우
-    note right of CleansingUseCase
-      정리할 워커가 없으므로 0을 반환합니다.
-    end note
+    WorkerPort --> CleansingUseCase: Updated count
+    deactivate WorkerPort
+else No Idle Workers
+    note right of CleansingUseCase: No workers to clean up.
 end
-
-CleansingUseCase --> Scheduler: UpdatedCount
+CleansingUseCase --> Scheduler: Result (e.g., updated count)
 deactivate CleansingUseCase
+
+
+== Scenario 4: Worker Heartbeat ==
+
+Client -> Handler: POST /worker/heartbeat/{workerId} (or similar endpoint)
+activate Handler
+note right of Handler: [Inbound Adapter]\nReceives heartbeat signal from a worker.
+
+Handler -> HeartbeatUseCase: recordHeartbeat(workerId)
+activate HeartbeatUseCase
+note right of HeartbeatUseCase: [Application Service]\nUpdates worker's last seen timestamp.
+
+HeartbeatUseCase -> WorkerPort: updateWorkerLastSeen(workerId, now())
+activate WorkerPort
+WorkerPort -> WorkerAdapter: updateWorkerLastSeen(workerId, now())
+activate WorkerAdapter
+WorkerAdapter -> DB: UPDATE snowflake_workers SET updated_at = NOW() WHERE worker_id = ?
+activate DB
+DB --> WorkerAdapter: Success
+deactivate DB
+WorkerAdapter --> WorkerPort: Success
+deactivate WorkerPort
+WorkerPort --> HeartbeatUseCase: Success
+deactivate WorkerPort
+
+HeartbeatUseCase --> Handler: Success response
+deactivate HeartbeatUseCase
+
+Handler --> Client: 200 OK
+deactivate Handler
 
 @enduml

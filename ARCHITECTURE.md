@@ -11,7 +11,7 @@
 ### 핵심 원칙
 - **Dependency Rule (의존성 규칙)**: 모든 의존성은 외부에서 내부(도메인)로 향합니다. 도메인 계층은 외부 계층(Web, Persistence)에 대해 전혀 알지 못합니다.
 - **DDD (Domain-Driven Design)**: 풍부한 도메인 모델과 Value Object를 사용하여 비즈니스 개념을 명확히 표현합니다.
-- **Reactive & Non-blocking**: Spring WebFlux와 Kotlin Coroutines를 사용하여 완전한 논블로킹 I/O를 구현, 높은 동시성을 처리합니다.
+- **Reactive & Non-blocking**: Spring WebFlux와 Kotlin Coroutines를 사용하여 비동기 I/O를 구현하며, JDBC 접근은 `Dispatchers.IO`로 격리하여 논블로킹 특성을 유지합니다.
 
 ---
 
@@ -19,7 +19,7 @@
 
 아래 다이어그램은 프로젝트의 계층 구조와 주요 컴포넌트 간의 관계를 보여줍니다. **Adapter**가 **Application**을, **Application**이 **Domain**을 사용하는 구조입니다.
 
-![Class Diagram](docs/class_diagram.png)
+![Class Diagram](snowflake-app/docs/class_diagram-Snowflake_URL_Shortener___Class_Diagram__Hexagonal___DDD_.png)
 
 ### 📂 `domain` (Core)
 비즈니스 로직의 핵심입니다. 프레임워크나 라이브러리에 의존하지 않는 순수한 Kotlin 코드로 작성됩니다.
@@ -36,7 +36,7 @@
 ### 📂 `adapter` (Infrastructure)
 애플리케이션과 외부 세계를 연결합니다.
 - **`inbound`**: HTTP 요청을 받아 애플리케이션 포트를 호출합니다 (WebFlux Handlers, Routers).
-- **`outbound`**: 애플리케이션의 아웃바운드 포트를 구현하여 실제 DB나 외부 시스템과 통신합니다 (R2DBC Persistence).
+- **`outbound`**: 애플리케이션의 아웃바운드 포트를 구현하여 실제 DB나 외부 시스템과 통신합니다 (JPA Persistence).
 
 ---
 
@@ -44,7 +44,7 @@
 
 **단축 URL 생성**과 **조회** 과정의 상세 흐름입니다.
 
-![Sequence Diagram](docs/sequence_diagram-Snowflake_URL_Shortener_Sequences__Hexagonal___DDD_.png)
+![Sequence Diagram](snowflake-app/docs/sequence_diagram-Snowflake_URL_Shortener_Sequences__Hexagonal___DDD_.png)
 
 ---
 
@@ -61,12 +61,12 @@ io.dave.snowflake
 │   └── outbound             # 외부 리소스 접근
 │       └── persistence      # DB 접근 구현
 │           ├── entity       # DB 테이블 매핑 엔티티
-│           ├── repository   # R2DBC Repository
+│           ├── repository   # JPA Repository + QueryDSL
 │           └── Adapter.kt   # Outbound Port 구현체
 ├── application              # [Application Layer]
 │   └── usecase              # 비즈니스 유스케이스 구현
 │       └── worker           # 워커 관리를 위한 유스케이스
-├── config                   # Spring 설정 (R2DBC, Snowflake 등)
+├── config                   # Spring 설정 (JPA, Snowflake 등)
 └── domain                   # [Domain Layer]
     ├── component            # 도메인 서비스 (ShortUrlGenerator)
     ├── generator            # ID 생성 및 인코딩 로직 (Snowflake, Base62)
@@ -86,7 +86,7 @@ URL 단축 서비스의 핵심 요구사항인 **높은 처리량(High Throughpu
     - **Efficiency**: 64bit 정수(`Long`) 하나에 타임스탬프와 시퀀스가 모두 포함되어 있어, DB 인덱싱 효율이 매우 높고 저장 공간을 절약합니다.
     - **Uniqueness**: 분산 환경에서도 서버(Worker) ID만 다르면 절대 중복되지 않는 ID 생성을 보장합니다.
 - **구조**: `1bit(Sign)` + `41bits(Timestamp)` + `10bits(WorkerID)` + `12bits(Sequence)` = **64bit Long**.
-- **Worker Management**: 분산 환경에서 Worker ID 충돌을 방지하기 위해 R2DBC를 사용하여 DB(`snowflake_workers` 테이블)를 통해 동적으로 Worker ID를 할당하고 관리합니다.
+- **Worker Management**: 분산 환경에서 Worker ID 충돌을 방지하기 위해 JDBC/JPA를 사용하여 DB(`snowflake_workers` 테이블)를 통해 동적으로 Worker ID를 할당하고 관리합니다.
     - **Active/Idle 상태 관리**: 주기적으로 Heartbeat를 보내고, 오랫동안 응답 없는 Worker ID를 회수하여 재사용합니다 (`WorkerCleansingService`).
 - **데이터베이스 스키마**:
     Snowflake ID 할당 및 단축 URL 저장을 위한 핵심 테이블 구조는 다음과 같습니다.
@@ -118,11 +118,11 @@ Spring WebFlux는 기본적으로 Reactor(Mono/Flux)를 사용하지만, 비즈�
 - **Imperative Style**: 콜백 지옥이나 연산자 체이닝 없이 직관적인 명령형 스타일로 비동기 코드를 작성합니다.
 - **Integration**: `CoWebExceptionHandler`, `awaitSingle`, `flow` 등을 통해 WebFlux와 매끄럽게 연동합니다.
 
-### 5.3. R2DBC & Event-Driven Persistence
-완전한 논블로킹 스택을 유지하기 위해 JDBC 대신 **R2DBC**를 사용하며, 성능 극대화를 위해 **이벤트 기반 아키텍처**를 도입했습니다.
+### 5.3. JPA & Event-Driven Persistence
+안정적인 데이터 관리와 성숙한 생태계를 위해 **JPA (Hibernate)** 및 **QueryDSL**을 도입했으며, 성능 극대화를 위해 **이벤트 기반 아키텍처**를 유지했습니다.
 
 - **Event-Driven**: `ShortenUrlUseCase`는 ID 생성 후 즉시 `ShortUrlCreatedEvent`를 발행하고 응답을 반환합니다. 이를 통해 사용자 응답 시간(Latency)을 최소화합니다.
-- **Batch Processing**: `UrlPersistenceEventListener`는 발행된 이벤트를 버퍼링하여 일정 크기(예: 500개) 또는 시간 단위로 묶어 DB에 **배치 저장(Batch Insert)**합니다. 이는 DB 연결 풀 효율을 극대화하고 부하를 줄입니다.
+- **Batch Processing**: `UrlPersistenceEventListener`는 발행된 이벤트를 버퍼링하여 일정 크기(예: 500개) 또는 시간 단위로 묶어 DB에 **배치 저장(Batch Insert)**합니다. 이는 DB 트랜잭션 오버헤드를 줄입니다.
 - **No-Check Strategy**: 단축 URL 생성 시 기존 URL 존재 여부를 확인하는 DB 조회(`SELECT`) 비용을 제거하기 위해, **중복 생성을 허용**하는 전략을 채택했습니다. 이는 성능을 위해 데이터 중복을 허용하는 Trade-off입니다.
 - **Write-Through Caching**: 이벤트 리스너가 DB 저장에 성공한 후, 비동기적으로 로컬 캐시(Caffeine)를 갱신하여 직후 조회 요청(`retrieve`)에 빠르게 응답할 수 있도록 합니다.
 
@@ -155,7 +155,7 @@ Spring WebFlux는 기본적으로 Reactor(Mono/Flux)를 사용하지만, 비즈�
 - `application.yml`: 메인 설정 및 프로파일 관리.
 - `application-common.yml`: 애플리케이션 공통 설정.
 - `application-logging.yml`: 로깅 및 Actuator 설정 (환경별 로그 레벨 포함).
-- `application-database.yml`: R2DBC 및 Connection Pool 설정.
+- `application-database.yml`: JDBC, JPA 및 Connection Pool 설정.
 - `application-doc.yml`: Swagger/OpenAPI 설정.
 
 ---
