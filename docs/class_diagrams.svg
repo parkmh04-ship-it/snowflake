@@ -998,7 +998,7 @@
             <polygon fill="none" points="1166.91,1136.5783,1148.91,1130.5783,1148.91,1142.5783,1166.91,1136.5783"
                      style="stroke:#181818;stroke-width:1;"/>
         </g><!--reverse link UrlMapping to ShortUrl-->
-        <g class="link" data-uid="lnk57"
+        <g class="link" 
            id="link_UrlMapping_ShortUrl">
             <path 
                   id="UrlMapping-backto-ShortUrl" style="stroke:#181818;stroke-width:1;"/>
@@ -1006,7 +1006,7 @@
                      points="1660.54,815.1783,1656.54,821.1783,1660.54,827.1783,1664.54,821.1783,1660.54,815.1783"
                      style="stroke:#181818;stroke-width:1;"/>
         </g><!--reverse link UrlMapping to LongUrl-->
-        <g class="link" data-uid="lnk58"
+        <g class="link" 
            id="link_UrlMapping_LongUrl">
             <path 
                   id="UrlMapping-backto-LongUrl" style="stroke:#181818;stroke-width:1;"/>
@@ -1014,7 +1014,7 @@
                      points="1750.66,815.1783,1746.66,821.1783,1750.66,827.1783,1754.66,821.1783,1750.66,815.1783"
                      style="stroke:#181818;stroke-width:1;"/>
         </g><!--reverse link Worker to WorkerStatus-->
-        <g class="link" data-uid="lnk59"
+        <g class="link" 
            id="link_Worker_WorkerStatus">
             <path 
                   id="Worker-backto-WorkerStatus" style="stroke:#181818;stroke-width:1;"/>
@@ -1071,7 +1071,7 @@
                   x="4036.74" y="288.1466">uses
             </text>
         </g><!--link WorkerCleansingHandler to WorkerCleansingUseCase-->
-        <g class="link" data-entity-2="WorkerCleansingUseCase"
+        <g class="link" 
            >
             <path 
                   d="M2496.81,260.8083 C2496.81,296.2083 2496.81,339.5783 2496.81,339.5783 C2496.81,339.5783 4423,339.5783 4423,339.5783 C4423,339.5783 4423,394.2783 4423,438.3783"
@@ -1083,7 +1083,7 @@
                   x="3443.92" y="336.1466">uses
             </text>
         </g><!--link UrlPersistenceEventListener to ShortUrlCreatedEvent-->
-        <g class="link" data-entity-2="ShortUrlCreatedEvent"
+        <g class="link" 
            >
             <path 
                   d="M3319,285.5383 C3319,430.2383 3319,749.5783 3319,749.5783 C3319,749.5783 3542.44,749.5783 3673.29,749.5783"
