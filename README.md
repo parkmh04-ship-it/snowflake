@@ -335,9 +335,9 @@ default ✓ [======================================] 000/200 VUs  2m0s
 
 ## 📚 문서 (Documentation)
 
-*   **아키텍처 문서**: [`docs/ARCHITECTURE.md`](snowflake-app/ARCHITECTURE.md)
-*   **클래스 다이어그램**: [`docs/class_diagram.puml`](snowflake-app/docs/class_diagram.puml)
-*   **시퀀스 다이어그램**: [`docs/sequence_diagram.puml`](snowflake-app/docs/sequence_diagram.puml)
+*   **아키텍처 문서**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+*   **클래스 다이어그램**: [`docs/class_diagram.puml`](docs/class_diagram.puml)
+*   **시퀀스 다이어그램**: [`docs/sequence_diagram.puml`](docs/sequence_diagram.puml)
 
 ## 📄 라이선스
 

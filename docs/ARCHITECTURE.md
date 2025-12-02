@@ -19,7 +19,7 @@
 
 아래 다이어그램은 프로젝트의 계층 구조와 주요 컴포넌트 간의 관계를 보여줍니다. **Adapter**가 **Application**을, **Application**이 **Domain**을 사용하는 구조입니다.
 
-![Class Diagram](snowflake-app/docs/class_diagram-Snowflake_URL_Shortener___Class_Diagram__Hexagonal___DDD_.jpg)
+![class_diagrams.svg](class_diagrams.svg)
 
 ### 📂 `domain` (Core)
 비즈니스 로직의 핵심입니다. 프레임워크나 라이브러리에 의존하지 않는 순수한 Kotlin 코드로 작성됩니다.
@@ -44,7 +44,7 @@
 
 **단축 URL 생성**과 **조회** 과정의 상세 흐름입니다.
 
-![Sequence Diagram](snowflake-app/docs/sequence_diagram-Snowflake_URL_Shortener_Sequences__Hexagonal___DDD_.jpg)
+![sequence_diagram.svg](sequence_diagram.svg)
 
 ---
 
