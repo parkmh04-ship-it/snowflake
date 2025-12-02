@@ -1,0 +1,26 @@
+spring:
+  config:
+    activate:
+      on-profile: alpha
+logging:
+  level:
+    root: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: beta
+logging:
+  level:
+    root: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: perf
+logging:
+  level:
+    root: OFF
+    io.dave.shortener.adapter.outbound.event: OFF

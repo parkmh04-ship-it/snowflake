@@ -1,3 +1,4 @@
 rootProject.name = "snowflake"
 
-include("snowflake-app")
+include("snowflake-shorter")
+include("snowflake-core")

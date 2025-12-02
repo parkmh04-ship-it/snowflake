@@ -316,9 +316,9 @@ running (2m00.0s), 000/200 VUs, 508989 complete and 0 interrupted iterations
 default ✓ [======================================] 000/200 VUs  2m0s
 
 **핵심 지표 요약:**
-*   **평균 응답 시간**: `10.25ms`
-*   **95% 응답 시간**: `21.9ms` 미만
-*   **초당 처리량 (TPS)**: `4550+ req/s`
+*   **평균 응답 시간**: `12.58ms`
+*   **95% 응답 시간**: `29.16ms`
+*   **초당 처리량 (TPS)**: `3980+ req/s`
 *   **성공률**: `100%`
 
 이 결과는 애플리케이션이 높은 부하 상황에서도 매우 빠르고 안정적으로 동작함을 보여줍니다.
@@ -335,7 +335,7 @@ default ✓ [======================================] 000/200 VUs  2m0s
 
 ## 📚 문서 (Documentation)
 
-*   **아키텍처 문서**: [`ARCHITECTURE.md`](snowflake-app/ARCHITECTURE.md)
+*   **아키텍처 문서**: [`docs/ARCHITECTURE.md`](snowflake-app/ARCHITECTURE.md)
 *   **클래스 다이어그램**: [`docs/class_diagram.puml`](snowflake-app/docs/class_diagram.puml)
 *   **시퀀스 다이어그램**: [`docs/sequence_diagram.puml`](snowflake-app/docs/sequence_diagram.puml)
 
