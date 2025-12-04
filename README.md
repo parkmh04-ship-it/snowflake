@@ -56,23 +56,19 @@ docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -e MYSQL_DATABA
 
 1.  **프로젝트 클론**:
     ```bash
-    git clone https://github.com/parkmh04-ship-it/snowflake-url-shortener.git
-    cd snowflake-url-shortener/snowflake-app
+    git clone https://github.com/parkmh04-ship-it/snowflake.git
+    cd snowflake
     ```
 2.  **빌드**:
     ```bash
-    ./gradlew clean build
+    ./gradlew :snowflake-shorter:clean :snowflake-shorter:build
     ```
 3.  **애플리케이션 실행**:
 
-    *   **Gradle을 통해 직접 실행**:
-        ```bash
-        ./gradlew bootRun
-        ```
-    *   **Jar 파일로 실행**:
-        ```bash
-        java -jar build/libs/snowflake-app-plain.jar
-        ```
+    *   **Gradle을 통해 직접 실행** (snowflake-shorter 모듈 실행):
+    ```bash
+    ./gradlew :snowflake-shorter:bootRun
+    ```
 
 애플리케이션은 기본적으로 `8080` 포트로 실행됩니다.
 
@@ -141,8 +137,8 @@ docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -e MYSQL_DATABA
 프로젝트에는 기본적인 부하 테스트 스크립트가 포함되어 있습니다. 애플리케이션을 실행한 상태에서 다음 명령어를 실행하세요.
 
 ```bash
-# snowflake-app 디렉토리에서 실행
-k6 run docs/k6/load-test.js
+  # snowflake-shorter 디렉토리에서 실행 (또는 프로젝트 루트에서 실행)
+  k6 run docs/k6/load-test.js
 ```
 
 ### 3. 테스트 시나리오
@@ -151,7 +147,7 @@ k6 run docs/k6/load-test.js
 #### 기본 부하 테스트 (Load Test)
 일반적인 트래픽 상황을 시뮬레이션합니다.
 ```bash
-k6 run docs/k6/load-test.js
+  k6 run docs/k6/load-test.js
 ```
 *   **Warm-up**: 30초 동안 50 VU까지 증가
 *   **Load**: 1분 동안 200 VU 유지
@@ -160,7 +156,7 @@ k6 run docs/k6/load-test.js
 #### 한계 테스트 (Stress Test)
 시스템의 한계 처리량(Max TPS)과 포화 지점을 찾기 위해 점진적으로 부하를 높입니다.
 ```bash
-k6 run docs/k6/stress-test.js
+  k6 run docs/k6/stress-test.js
 ```
 *   2분마다 100 VU씩 증가시켜 최대 400 VU까지 테스트합니다.
 *   95%의 요청이 500ms 이내에 처리되는지 검증합니다.
@@ -168,7 +164,7 @@ k6 run docs/k6/stress-test.js
 #### 스파이크 테스트 (Spike Test)
 갑작스러운 트래픽 폭증에 대한 시스템의 반응과 회복력을 테스트합니다.
 ```bash
-k6 run docs/k6/spike-test.js
+  k6 run docs/k6/spike-test.js
 ```
 *   10초 만에 1000 VU까지 급격히 부하를 증가시킵니다.
 *   시스템이 고부하 상태에서 생존하는지, 그리고 부하가 줄어들 때 정상적으로 회복하는지 확인합니다.
@@ -179,7 +175,7 @@ k6 run docs/k6/spike-test.js
 #### 기본 부하 테스트 (Load Test)
 일반적인 트래픽 상황을 시뮬레이션합니다.
 ```bash
-k6 run docs/k6/load-test.js
+  k6 run docs/k6/load-test.js
 ```
 *   **Warm-up**: 30초 동안 50 VU까지 증가
 *   **Load**: 1분 동안 200 VU 유지
@@ -188,7 +184,7 @@ k6 run docs/k6/load-test.js
 #### 한계 테스트 (Stress Test)
 시스템의 한계 처리량(Max TPS)과 포화 지점을 찾기 위해 점진적으로 부하를 높입니다.
 ```bash
-k6 run docs/k6/stress-test.js
+  k6 run docs/k6/stress-test.js
 ```
 *   2분마다 100 VU씩 증가시켜 최대 400 VU까지 테스트합니다.
 *   95%의 요청이 500ms 이내에 처리되는지 검증합니다.
@@ -196,7 +192,7 @@ k6 run docs/k6/stress-test.js
 #### 스파이크 테스트 (Spike Test)
 갑작스러운 트래픽 폭증에 대한 시스템의 반응과 회복력을 테스트합니다.
 ```bash
-k6 run docs/k6/spike-test.js
+  k6 run docs/k6/spike-test.js
 ```
 *   10초 만에 1000 VU까지 급격히 부하를 증가시킵니다.
 *   시스템이 고부하 상태에서 생존하는지, 그리고 부하가 줄어들 때 정상적으로 회복하는지 확인합니다.
@@ -328,16 +324,16 @@ default ✓ [======================================] 000/200 VUs  2m0s
 모든 단위 및 통합 테스트를 실행하고 JaCoCo 테스트 커버리지 리포트를 생성합니다.
 
 ```bash
-./gradlew clean test jacocoTestReport
+./gradlew :snowflake-shorter:clean :snowflake-shorter:test :snowflake-shorter:jacocoTestReport
 ```
 
-테스트 결과 리포트는 `snowflake-app/build/reports/tests/test/index.html`에서, JaCoCo 커버리지 리포트는 `snowflake-app/build/reports/jacoco/test/html/index.html`에서 확인할 수 있습니다.
+테스트 결과 리포트는 `snowflake-shorter/build/reports/tests/test/index.html`에서, JaCoCo 커버리지 리포트는 `snowflake-shorter/build/reports/jacoco/test/html/index.html`에서 확인할 수 있습니다.
 
 ## 📚 문서 (Documentation)
 
-*   **아키텍처 문서**: [`ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-*   **클래스 다이어그램**: [`class_diagrams.svg`](docs/class_diagrams.svg)
-*   **시퀀스 다이어그램**: [`sequence_diagram.svg`](docs/sequence_diagram.svg)
+*   **아키텍처 문서**: [ARCHITECTURE.md](docs/ARCHITECTURE.md)
+*   **클래스 다이어그램**: ![class_diagram-Snowflake_URL_Shortener___Class_Diagram__Hexagonal___DDD_.png](docs/class_diagram-Snowflake_URL_Shortener___Class_Diagram__Hexagonal___DDD_.png)
+*   **시퀀스 다이어그램**: ![sequence_diagram-Snowflake_URL_Shortener_Sequences__Hexagonal___DDD_.png](docs/sequence_diagram-Snowflake_URL_Shortener_Sequences__Hexagonal___DDD_.png)
 
 ## 📄 라이선스
 
