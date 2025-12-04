@@ -1,6 +1,6 @@
 package io.dave.snowflake.adapter.inbound.handler
 
-import io.dave.snowflake.config.AssignedWorkerInfo
+import io.dave.snowflake.core.config.AssignedWorkerInfo
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse

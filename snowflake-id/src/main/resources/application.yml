@@ -1,0 +1,9 @@
+spring:
+  profiles:
+    active: alpha, infra
+    include:
+      - common
+      - database
+      - doc
+      - logging
+      - metric

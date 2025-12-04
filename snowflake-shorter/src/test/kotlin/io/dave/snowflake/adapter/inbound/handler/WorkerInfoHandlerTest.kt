@@ -2,7 +2,7 @@ package io.dave.snowflake.adapter.inbound.handler
 
 import com.ninjasquad.springmockk.MockkBean
 import io.dave.snowflake.adapter.inbound.router.WorkerInfoRouter
-import io.dave.snowflake.config.AssignedWorkerInfo
+import io.dave.snowflake.core.config.AssignedWorkerInfo
 import io.mockk.every
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test

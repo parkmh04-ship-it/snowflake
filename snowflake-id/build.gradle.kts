@@ -27,6 +27,14 @@ dependencies {
     implementation(libs.spring.boot.starter.cache) // Cache support
     implementation(libs.kaffeine) // Caffeine cache support
 
+    // JPA & QueryDSL dependencies (REQUIRED for snowflake-app to compile and test)
+    implementation(libs.spring.boot.starter.data.jpa) // Required for @Entity, @Repository etc.
+    implementation(libs.mysql.connector.j) // Assuming MySQL is still used by the app
+    implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta") // QueryDSL for JPA queries
+    implementation(libs.jakarta.persistence.api) // RE-ADDED as implementation for runtime availability
+    kapt("com.querydsl:querydsl-apt:5.1.0:jakarta") // QueryDSL APT processor
+    kapt(libs.jakarta.annotation.api)
+    kapt(libs.jakarta.persistence.api)
 
     // Swagger & Metric
     implementation(libs.springdoc.openapi.starter.webflux.ui) // OpenAPI documentation

@@ -1,6 +1,5 @@
-package io.dave.snowflake.config
+package io.dave.snowflake.core.config
 
-import io.dave.snowflake.core.config.AssignedWorkerInfo
 import io.dave.snowflake.domain.generator.IdGenerator
 import io.dave.snowflake.domain.generator.MonitoredIdGenerator
 import io.dave.snowflake.domain.generator.PooledIdGenerator

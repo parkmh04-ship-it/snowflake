@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.springBoot) // ✅ [유지] BOM 및 테스트 편의를 위해 유지
     alias(libs.plugins.kotlinSpring)
     alias(libs.plugins.spotless)
+    kotlin("kapt") // Keep kapt for annotation processing
     jacoco // Keep jacoco plugin
 }
 
@@ -30,6 +31,14 @@ dependencies {
 
     // Spring Boot basic starter
     api(libs.spring.boot.starter) // Use catalog alias
+    // JPA & QueryDSL dependencies (REQUIRED for snowflake-app to compile and test)
+    api(libs.spring.boot.starter.data.jpa) // Required for @Entity, @Repository etc.
+    api(libs.mysql.connector.j) // Assuming MySQL is still used by the app
+    api("com.querydsl:querydsl-jpa:5.1.0:jakarta") // QueryDSL for JPA queries
+    api(libs.jakarta.persistence.api) // RE-ADDED as implementation for runtime availability
+    kapt("com.querydsl:querydsl-apt:5.1.0:jakarta") // QueryDSL APT processor
+    kapt(libs.jakarta.annotation.api)
+    kapt(libs.jakarta.persistence.api)
 
     // Micrometer Core API
     api(libs.micrometer.core) // Use catalog alias
