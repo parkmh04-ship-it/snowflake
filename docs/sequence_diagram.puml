@@ -21,6 +21,7 @@ box "Domain Layer - Core Logic" #LightGreen
     participant "ShortUrlGenerator" as Generator
     participant "PooledIdGenerator" as IdGen
     participant "Base62Encoder" as Encoder
+    participant "SnowflakeIdGenerator" as SnowflakeIdGen
 end box
 
 box "Ports (Hexagonal - Outbound)" #Orange
@@ -66,6 +67,10 @@ alt New URL
     note right of Generator: [Domain Service]\nGenerates a unique short URL.
     Generator -> IdGen: nextId()
     activate IdGen
+    IdGen -> SnowflakeIdGen: nextId()
+    activate SnowflakeIdGen
+    SnowflakeIdGen --> IdGen: Snowflake ID
+    deactivate SnowflakeIdGen
     IdGen --> Generator: Snowflake ID
     deactivate IdGen
     Generator -> Encoder: encode(ID)
