@@ -34,3 +34,19 @@ WITH RECURSIVE nums(n) AS (
 )
 SELECT n, 'NONE', 'IDLE' FROM nums;
 
+-- Dead Letter Queue를 위한 failed_events 테이블 생성
+DROP TABLE IF EXISTS failed_events;
+
+CREATE TABLE failed_events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    short_url VARCHAR(255) NOT NULL,
+    long_url TEXT NOT NULL,
+    created_at BIGINT NOT NULL,
+    failed_at BIGINT NOT NULL,
+    retry_count INT NOT NULL DEFAULT 0,
+    last_error TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    INDEX idx_status (status),
+    INDEX idx_failed_at (failed_at),
+    INDEX idx_status_retry_count (status, retry_count)
+);

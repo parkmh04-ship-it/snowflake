@@ -123,7 +123,54 @@ docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -e MYSQL_DATABA
 *   `GET /actuator/prometheus`
 
 ### 2. 주요 커스텀 메트릭
+
+#### 성능 메트릭
 *   `snowflake_id_generation_time_seconds`: Snowflake ID 생성에 소요되는 시간을 측정하는 히스토그램입니다. 스레드 풀 경합 여부나 성능 저하를 감지하는 데 유용합니다.
+
+#### 회복 탄력성 메트릭 (Resilience Metrics)
+*   `url_persistence_success_total`: 성공적으로 영속화된 URL 배치 개수
+*   `url_persistence_failure_total`: 실패한 URL 배치 영속화 시도 개수
+*   `url_persistence_dlq_total`: Dead Letter Queue에 전송된 이벤트 개수
+
+이 메트릭들을 통해 시스템의 안정성과 데이터 손실 위험을 실시간으로 모니터링할 수 있습니다.
+
+## 🔄 Dead Letter Queue (DLQ)
+
+애플리케이션은 **Dead Letter Queue** 패턴을 구현하여 일시적인 장애로 인한 데이터 손실을 방지합니다.
+
+### 주요 기능
+*   **Exponential Backoff Retry**: 배치 저장 실패 시 최대 3회까지 지수적으로 증가하는 지연 시간으로 재시도
+*   **DLQ 저장**: 모든 재시도가 실패한 이벤트는 `failed_events` 테이블에 저장
+*   **자동 재처리**: 스케줄러가 5분마다 DLQ의 이벤트를 자동으로 재시도
+*   **상태 관리**: PENDING → PROCESSING → RESOLVED/FAILED 상태 전이
+*   **자동 정리**: 7일 이상 된 RESOLVED 이벤트는 매일 자정에 자동 삭제
+
+### 설정
+`application.yml`에서 DLQ 동작을 커스터마이징할 수 있습니다:
+
+```yaml
+snowflake:
+  dlq:
+    retry:
+      initial-delay: 60000    # 재시도 스케줄러 초기 지연 (밀리초, 기본값: 1분)
+      fixed-delay: 300000     # 재시도 주기 (밀리초, 기본값: 5분)
+    cleanup:
+      cron: "0 0 0 * * ?"     # 정리 스케줄 (기본값: 매일 자정)
+```
+
+### DLQ 모니터링
+`failed_events` 테이블을 직접 조회하여 실패한 이벤트를 확인할 수 있습니다:
+
+```sql
+-- 재시도 대기 중인 이벤트 조회
+SELECT * FROM failed_events WHERE status = 'PENDING' ORDER BY failed_at;
+
+-- 영구 실패 이벤트 조회
+SELECT * FROM failed_events WHERE status = 'FAILED';
+
+-- 상태별 통계
+SELECT status, COUNT(*) as count FROM failed_events GROUP BY status;
+```
 
 ## ⚡ 성능 테스트 (Performance Testing)
 
