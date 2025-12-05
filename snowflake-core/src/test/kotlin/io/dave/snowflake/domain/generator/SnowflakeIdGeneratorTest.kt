@@ -1,5 +1,6 @@
 package io.dave.snowflake.domain.generator
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -7,9 +8,14 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.and
+import kotlin.compareTo
+import kotlin.plus
+import kotlin.shr
 
 @DisplayName("SnowflakeIdGenerator 테스트")
 class SnowflakeIdGeneratorTest {

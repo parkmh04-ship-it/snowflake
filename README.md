@@ -9,11 +9,6 @@
 
 **Snowflake URL Shortener**는 고성능, 분산 환경에 최적화된 URL 단축 서비스입니다. Hexagonal Architecture와 DDD(Domain-Driven Design) 원칙을 엄격히 준수하며, Spring WebFlux와 Kotlin Coroutines를 활용하여 비동기 처리 및 JDBC 접근을 `Dispatchers.IO`로 격리하여 논블로킹 특성을 유지합니다. Twitter Snowflake 알고리즘 기반의 고유 ID 생성 방식으로 높은 처리량과 효율적인 데이터 관리를 제공합니다.
 
-프로젝트는 다음과 같은 모듈로 구성됩니다:
-*   **snowflake-core**: Snowflake ID 생성 로직을 담은 코어 라이브러리.
-*   **snowflake-shorter**: 단축 URL 서비스 애플리케이션.
-*   **snowflake-id**: 글로벌 트랜잭션 ID 생성 서비스.
-
 ## ✨ 주요 특징
 
 *   **Hexagonal Architecture & DDD**: 비즈니스 로직과 인프라를 분리하여 높은 유지보수성과 테스트 용이성을 확보했습니다.

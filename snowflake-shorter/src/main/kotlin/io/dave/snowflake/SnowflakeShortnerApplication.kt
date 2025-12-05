@@ -6,9 +6,9 @@ import org.springframework.scheduling.annotation.EnableScheduling
 
 @EnableScheduling
 @SpringBootApplication
-class SnowflakeShortnerApplication
+class SnowflakeApplication
 
 fun main(args: Array<String>) {
     System.setProperty("reactor.netty.ioWorkerCount", "16")
-    runApplication<SnowflakeShortnerApplication>(*args)
+    runApplication<SnowflakeApplication>(*args)
 }
