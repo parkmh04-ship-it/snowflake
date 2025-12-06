@@ -17,8 +17,8 @@ Snowflake URL Shortener는 **높은 신뢰성**과 **안정성**을 보장하기
 ### 2. 통합 테스트 (Integration Tests)
 *   **목적**: 컴포넌트 간의 상호작용 및 전체 흐름 검증
 *   **범위**: Controller -> Service -> Repository -> DB
-*   **도구**: Spring Boot Test, H2 Database (MySQL Mode), **WebTestClient**
-*   **특징**: WebFlux 환경에 최적화된 비동기/Non-blocking 테스트 클라이언트 사용
+*   **도구**: Spring Boot Test, H2 Database (MySQL Mode), TestRestTemplate
+*   **특징**: 실제 스프링 컨텍스트를 로드하여 실제 환경과 유사하게 테스트
 
 ---
 
@@ -37,14 +37,16 @@ spring:
 ### 2. 기본 클래스: `IntegrationTestBase`
 모든 통합 테스트는 이 클래스를 상속받아 공통 설정을 공유합니다.
 *   `@SpringBootTest(webEnvironment = RANDOM_PORT)`: 랜덤 포트에서 서버 실행
-*   `@AutoConfigureWebTestClient`: WebTestClient 자동 설정
 *   `@ActiveProfiles("test")`: 테스트 프로파일 적용
+*   `@Transactional`: 테스트 종료 후 데이터 롤백 (필요 시)
 
-### 3. HTTP 클라이언트: `WebTestClient`
-`TestRestTemplate` 대신 `WebTestClient`를 사용하여 Reactive Stack을 효과적으로 테스트합니다.
-*   **Fluent API**: 직관적인 요청/응답 검증 (`expectStatus`, `expectBody` 등)
-*   **Non-blocking**: 비동기 요청 처리 검증 용이
+### 3. HTTP 클라이언트 설정
+`TestRestTemplate` 사용 시 리다이렉트(302) 응답을 자동으로 따라가지 않도록 설정하여, 단축 URL 응답 자체를 검증할 수 있게 했습니다.
 
+```kotlin
+// 리다이렉트 비활성화
+connection.instanceFollowRedirects = false
+```
 
 ---
 

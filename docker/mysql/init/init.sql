@@ -1,7 +1,10 @@
--- 기존 shortener_history 테이블 삭제 (개발용)
+-- 기존 테이블 삭제
 DROP TABLE IF EXISTS shortener_history;
+DROP TABLE IF EXISTS worker_node;
+DROP TABLE IF EXISTS snowflake_workers;
+DROP TABLE IF EXISTS failed_events;
 
--- shortener_history 테이블 생성 (인덱스 포함)
+-- shortener_history 테이블 생성
 CREATE TABLE shortener_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     short_url VARCHAR(255) NOT NULL UNIQUE,
@@ -10,10 +13,7 @@ CREATE TABLE shortener_history (
     INDEX idx_long_url (long_url)
 );
 
--- 기존 worker_node 테이블 삭제
-DROP TABLE IF EXISTS worker_node;
-
--- Snowflake 워커 ID 할당을 위한 테이블 생성
+-- snowflake_workers 테이블 생성
 CREATE TABLE IF NOT EXISTS snowflake_workers (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     worker_num BIGINT NOT NULL UNIQUE,
@@ -24,9 +24,7 @@ CREATE TABLE IF NOT EXISTS snowflake_workers (
     INDEX idx_status (status)
 );
 
--- Dead Letter Queue를 위한 failed_events 테이블 생성
-DROP TABLE IF EXISTS failed_events;
-
+-- failed_events 테이블 생성
 CREATE TABLE failed_events (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     short_url VARCHAR(255) NOT NULL,
@@ -40,3 +38,12 @@ CREATE TABLE failed_events (
     INDEX idx_failed_at (failed_at),
     INDEX idx_status_retry_count (status, retry_count)
 );
+
+-- 초기 데이터 삽입
+INSERT INTO snowflake_workers (worker_num, worker_name, status)
+WITH RECURSIVE nums(n) AS (
+ SELECT 0
+ UNION ALL
+  SELECT n + 1 FROM nums WHERE n < 255
+)
+SELECT n, 'NONE', 'IDLE' FROM nums;
