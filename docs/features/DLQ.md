@@ -15,8 +15,8 @@ graph TD
     A[UrlPersistenceEventListener] -->|DB 저장 시도| B{성공?}
     B -->|Yes| C[캐시 갱신 & 메트릭 증가]
     B -->|No| D{재시도 < 3회?}
-    D -->|Yes| E[Exponential Backoff 대기] --> A
-    D -->|No| F[DLQ 저장 (failed_events)]
+    D -->|Yes| E["Exponential Backoff 대기"] --> A
+    D -->|No| F["DLQ 저장 (failed_events)"]
     
     G[DeadLetterQueueScheduler] -->|5분 주기| H[RetryFailedEventsUseCase]
     H -->|PENDING 이벤트 조회| I{재처리 성공?}

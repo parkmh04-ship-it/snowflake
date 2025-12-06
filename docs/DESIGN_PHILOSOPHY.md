@@ -36,10 +36,16 @@ Snowflake URL Shortener는 Global Scale의 트래픽을 처리해야 하므로, 
 
 ## 📝 기술적 의사결정 (Decision Log)
 
-### 왜 Spring WebFlux가 아닌 MVC + Coroutines인가?
-*   **생산성**: Spring MVC의 익숙한 프로그래밍 모델 유지
-*   **가독성**: Reactive Streams(Reactor)의 복잡한 연산자 체이닝 대신, 명령형 코드처럼 읽히는 Coroutines 사용
-*   **성능**: Virtual Threads(Project Loom)와 유사한 경량 스레드 모델로 높은 처리량 달성
+### 왜 Reactor(Mono/Flux) 대신 Coroutines인가?
+Spring WebFlux는 기본적으로 Reactor를 사용하지만, 우리는 **Kotlin Coroutines**를 선택했습니다.
+*   **가독성**: `flatMap`, `zip` 같은 복잡한 연산자 체이닝 없이, 동기 코드처럼 작성하고 비동기로 동작합니다.
+*   **생산성**: 명령형 프로그래밍 스타일에 익숙한 개발자가 쉽게 적응할 수 있습니다.
+*   **구조화된 동시성**: `CoroutineScope`를 통해 생명주기를 명확하게 관리하고 에러 처리를 일관되게 할 수 있습니다.
+
+### WebFlux 환경에서 왜 R2DBC가 아닌 JPA(JDBC)인가?
+완전한 Non-blocking 스택인 R2DBC 대신, **JPA (Hibernate)**를 선택했습니다.
+*   **성숙도와 생태계**: JPA의 강력한 ORM 기능, 캐싱, 더티 체킹 등 성숙한 기능을 활용하여 개발 생산성을 높입니다.
+*   **Blocking I/O 처리**: JDBC는 Blocking API이므로, **`Dispatchers.IO`** 컨텍스트로 감싸서 실행하여 WebFlux의 Event Loop(Netty)가 차단되지 않도록 철저히 격리했습니다.
 
 ### 왜 JPA 엔티티에 Data Class를 사용하는가?
 *   **간결성**: Boilerplate 코드(Getter/Setter, equals/hashCode) 제거
