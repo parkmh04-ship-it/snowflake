@@ -13,7 +13,8 @@ services:
       MYSQL_PASSWORD: app_rw
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./docker/mysql/init/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./snowflake-shorter/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./snowflake-shorter/src/main/resources/data_init.sql:/docker-entrypoint-initdb.d/02-data-init.sql
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
   prometheus:

@@ -7,7 +7,7 @@ CREATE TABLE shortener_history (
     short_url VARCHAR(255) NOT NULL UNIQUE,
     long_url VARCHAR(1000) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_long_url (long_url)
+    INDEX idx_long_url (long_url(255))
 );
 
 -- 기존 worker_node 테이블 삭제
