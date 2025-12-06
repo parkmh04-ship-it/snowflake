@@ -8,7 +8,6 @@ import io.dave.snowflake.domain.util.retryWithExponentialBackoffCatching
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
-import org.springframework.cache.CacheManager
 import org.springframework.stereotype.Service
 
 /**
@@ -19,8 +18,7 @@ import org.springframework.stereotype.Service
 @Service
 class RetryFailedEventsUseCase(
         private val deadLetterQueuePort: DeadLetterQueuePort,
-        private val urlPort: UrlPort,
-        private val cacheManager: CacheManager
+        private val urlPort: UrlPort
 ) {
     private val logger = KotlinLogging.logger {}
 
@@ -68,11 +66,6 @@ class RetryFailedEventsUseCase(
                     // 성공: RESOLVED 상태로 변경
                     val resolvedEvent = processingEvent.withStatus(FailedEventStatus.RESOLVED)
                     deadLetterQueuePort.update(resolvedEvent)
-
-                    // 캐시 갱신
-                    val mapping = failedEvent.toUrlMapping()
-                    cacheManager.getCache("shortUrlCache")?.put(mapping.shortUrl.value, mapping)
-                    cacheManager.getCache("longUrlCache")?.put(mapping.longUrl.value, mapping)
 
                     successCount++
                     logger.info { "[DLQ Retry] Successfully retried event ID: ${failedEvent.id}" }

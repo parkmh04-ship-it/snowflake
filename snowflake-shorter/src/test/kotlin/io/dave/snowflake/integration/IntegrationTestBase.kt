@@ -1,10 +1,5 @@
 package io.dave.snowflake.integration
 
-import io.dave.snowflake.integration.config.TestSnowflakeConfig
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.context.annotation.Import
-import org.springframework.test.context.ActiveProfiles
-
 /**
  * H2 인메모리 데이터베이스를 사용하는 통합 테스트 기본 클래스입니다.
  *
@@ -16,8 +11,32 @@ import org.springframework.test.context.ActiveProfiles
  * - MySQL 호환 모드: MODE=MySQL로 실제 환경과 유사한 동작
  * - 테스트용 ID 생성기: Worker 초기화 없이 간단한 순차 ID 사용
  */
+import io.dave.snowflake.adapter.outbound.persistence.repository.FailedEventRepository
+import io.dave.snowflake.adapter.outbound.persistence.repository.ShortUrlRepository
+import io.dave.snowflake.adapter.outbound.persistence.repository.WorkerRepository
+import io.dave.snowflake.integration.config.TestSnowflakeConfig
+import org.junit.jupiter.api.AfterEach
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.ActiveProfiles
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import(TestSnowflakeConfig::class)
 @org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
-abstract class IntegrationTestBase
+abstract class IntegrationTestBase {
+
+    @Autowired protected lateinit var shortUrlRepository: ShortUrlRepository
+
+    @Autowired protected lateinit var failedEventRepository: FailedEventRepository
+
+    @Autowired protected lateinit var workerRepository: WorkerRepository
+
+    @AfterEach
+    fun cleanup() {
+        shortUrlRepository.deleteAll()
+        failedEventRepository.deleteAll()
+        workerRepository.deleteAll()
+    }
+}

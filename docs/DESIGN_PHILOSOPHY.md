@@ -51,3 +51,10 @@ Spring WebFlux는 기본적으로 Reactor를 사용하지만, 우리는 **Kotlin
 *   **간결성**: Boilerplate 코드(Getter/Setter, equals/hashCode) 제거
 *   **불변성**: `val` 프로퍼티 사용으로 불변 객체 보장
 *   **주의사항**: JPA 스펙상 기본 생성자가 필요하므로, 모든 필드에 기본값을 제공하거나 플러그인 활용 필요
+
+### 왜 Caffeine 대신 Redis를 사용하는가?
+초기에는 로컬 캐시인 Caffeine을 사용했으나, **Redis**로 전환했습니다.
+*   **분산 환경 지원**: Scale-out 시 모든 인스턴스가 동일한 캐시 데이터를 공유하여 데이터 일관성 보장
+*   **지속성**: 애플리케이션 재배포 시에도 캐시 데이터 유지 (Cold Start 방지)
+*   **메모리 효율**: JVM 힙 메모리 부담 감소
+*   **성능 Trade-off**: 네트워크 I/O 오버헤드가 발생하지만, **Write-Through (Fire-and-Forget)** 패턴과 **Non-blocking I/O**를 통해 지연 시간을 최소화했습니다.

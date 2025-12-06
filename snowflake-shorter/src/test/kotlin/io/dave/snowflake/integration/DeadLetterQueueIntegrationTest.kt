@@ -1,6 +1,5 @@
 package io.dave.snowflake.integration
 
-import io.dave.snowflake.adapter.outbound.persistence.repository.FailedEventRepository
 import io.dave.snowflake.application.usecase.RetryFailedEventsUseCase
 import io.dave.snowflake.domain.model.FailedEvent
 import io.dave.snowflake.domain.model.FailedEventStatus
@@ -29,8 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired
 class DeadLetterQueueIntegrationTest : IntegrationTestBase() {
 
         @Autowired private lateinit var deadLetterQueuePort: DeadLetterQueuePort
-
-        @Autowired private lateinit var failedEventRepository: FailedEventRepository
 
         @Autowired private lateinit var retryFailedEventsUseCase: RetryFailedEventsUseCase
 

@@ -5,9 +5,9 @@ DROP TABLE IF EXISTS shortener_history;
 CREATE TABLE shortener_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     short_url VARCHAR(255) NOT NULL UNIQUE,
-    long_url VARCHAR(1000) NOT NULL,
+    long_url VARCHAR(4000) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_long_url (long_url(255))
+    INDEX idx_long_url (long_url)
 );
 
 -- 기존 worker_node 테이블 삭제
@@ -30,7 +30,7 @@ DROP TABLE IF EXISTS failed_events;
 CREATE TABLE failed_events (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     short_url VARCHAR(255) NOT NULL,
-    long_url TEXT NOT NULL,
+    long_url VARCHAR(4000) NOT NULL,
     created_at BIGINT NOT NULL,
     failed_at BIGINT NOT NULL,
     retry_count INT NOT NULL DEFAULT 0,

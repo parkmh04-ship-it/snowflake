@@ -1,5 +1,6 @@
 package io.dave.snowflake.adapter.outbound.persistence
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.dave.snowflake.adapter.outbound.persistence.entity.ShortUrlEntity
 import io.dave.snowflake.adapter.outbound.persistence.repository.ShortUrlRepository
 import io.dave.snowflake.domain.model.LongUrl
@@ -9,46 +10,113 @@ import io.dave.snowflake.domain.port.outbound.UrlPort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.withContext
-import org.springframework.cache.annotation.Cacheable
+import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Repository
+import java.time.Duration
 
 @Repository
 class UrlPersistenceAdapter(
-    private val repository: ShortUrlRepository
+    private val repository: ShortUrlRepository,
+    private val reactiveRedisTemplate: ReactiveRedisTemplate<String, String>,
+    private val objectMapper: ObjectMapper
 ) : UrlPort {
 
-    override suspend fun save(mapping: UrlMapping): UrlMapping = withContext(Dispatchers.IO) {
-        val entity = ShortUrlEntity.fromDomain(mapping)
-        val savedEntity = repository.save(entity)
-        savedEntity.toDomain()
-    }
+    override suspend fun save(mapping: UrlMapping): UrlMapping =
+            withContext(Dispatchers.IO) {
+                val entity = ShortUrlEntity.fromDomain(mapping)
+                val savedEntity = repository.save(entity)
+                val domain = savedEntity.toDomain()
+
+                // Cache Write-Through (Fire-and-Forget)
+                cacheUrlMapping(domain)
+
+                domain
+            }
 
     override fun saveAll(mappings: Flow<UrlMapping>): Flow<UrlMapping> {
-        // Flow는 비동기 스트림이므로, 수집(collect)하여 리스트로 만든 뒤 배치 저장하고 다시 Flow로 변환
-        // 주의: saveAll은 블로킹이므로 flow 빌더 내부에서 Dispatchers.IO로 감싸야 함
         return kotlinx.coroutines.flow.flow {
             val entities = mappings.toList().map { ShortUrlEntity.fromDomain(it) }
             if (entities.isNotEmpty()) {
-                val savedEntities = withContext(Dispatchers.IO) {
-                    repository.saveAll(entities)
+                val savedEntities = withContext(Dispatchers.IO) { repository.saveAll(entities) }
+                savedEntities.forEach {
+                    val domain = it.toDomain()
+                    cacheUrlMapping(domain)
+                    emit(domain)
                 }
-                savedEntities.forEach { emit(it.toDomain()) }
             }
         }
     }
 
-    @Cacheable(value = ["shortUrlCache"], key = "#shortUrl.value")
-    override suspend fun findByShortUrl(shortUrl: ShortUrl): UrlMapping? = withContext(Dispatchers.IO) {
-        repository.findByShortUrl(shortUrl.value)?.toDomain()
+    override suspend fun findByShortUrl(shortUrl: ShortUrl): UrlMapping? {
+        val key = "short:${shortUrl.value}"
+        return try {
+            val cached = reactiveRedisTemplate.opsForValue().get(key).awaitSingleOrNull()
+            if (cached != null) {
+                objectMapper.readValue(cached, UrlMapping::class.java)
+            } else {
+                findAndCache(shortUrl.value, key) { repository.findByShortUrl(it) }
+            }
+        } catch (e: Exception) {
+            // Redis 오류 시 DB 조회로 Fallback
+            findAndCache(shortUrl.value, key) { repository.findByShortUrl(it) }
+        }
     }
 
-    @Cacheable(value = ["longUrlCache"], key = "#longUrl.value")
-    override suspend fun findByLongUrl(longUrl: LongUrl): UrlMapping? = withContext(Dispatchers.IO) {
-        repository.findByLongUrl(longUrl.value)?.toDomain()
+    override suspend fun findByLongUrl(longUrl: LongUrl): UrlMapping? {
+        // LongUrl 조회는 캐싱 전략에 따라 다를 수 있으나, 기존 @Cacheable 유지
+        val key = "long:${longUrl.value}"
+        return try {
+            val cached = reactiveRedisTemplate.opsForValue().get(key).awaitSingleOrNull()
+            if (cached != null) {
+                objectMapper.readValue(cached, UrlMapping::class.java)
+            } else {
+                findAndCache(longUrl.value, key) { repository.findByLongUrl(it) }
+            }
+        } catch (e: Exception) {
+            findAndCache(longUrl.value, key) { repository.findByLongUrl(it) }
+        }
     }
 
-    override suspend fun existsByShortUrl(shortUrl: ShortUrl): Boolean = withContext(Dispatchers.IO) {
-        repository.findByShortUrl(shortUrl.value) != null
+    override suspend fun existsByShortUrl(shortUrl: ShortUrl): Boolean {
+        // 캐시 확인 후 없으면 DB 확인
+        val key = "short:${shortUrl.value}"
+        val hasKey = reactiveRedisTemplate.hasKey(key).awaitSingleOrNull() ?: false
+        if (hasKey) return true
+
+        return withContext(Dispatchers.IO) { repository.findByShortUrl(shortUrl.value) != null }
+    }
+
+    private suspend fun findAndCache(
+            identifier: String,
+            key: String,
+            dbQuery: (String) -> ShortUrlEntity?
+    ): UrlMapping? =
+            withContext(Dispatchers.IO) {
+                val entity = dbQuery(identifier)
+                val domain = entity?.toDomain()
+                if (domain != null) {
+                    cacheUrlMapping(domain)
+                }
+                domain
+            }
+
+    private fun cacheUrlMapping(domain: UrlMapping) {
+        try {
+            val json = objectMapper.writeValueAsString(domain)
+            // ShortUrl Key
+            reactiveRedisTemplate
+                    .opsForValue()
+                    .set("short:${domain.shortUrl.value}", json, Duration.ofMinutes(10))
+                    .subscribe()
+            // LongUrl Key (Optional: if we want to cache by longUrl too)
+            reactiveRedisTemplate
+                    .opsForValue()
+                    .set("long:${domain.longUrl.value}", json, Duration.ofMinutes(10))
+                    .subscribe()
+        } catch (e: Exception) {
+            // Logging needed but ignored for now to prevent failure
+        }
     }
 }

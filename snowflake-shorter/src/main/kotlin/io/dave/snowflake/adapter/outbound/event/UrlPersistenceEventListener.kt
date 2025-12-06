@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import org.springframework.cache.CacheManager
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 
@@ -32,7 +31,6 @@ import org.springframework.stereotype.Component
 @Component
 class UrlPersistenceEventListener(
         private val urlPort: UrlPort,
-        private val cacheManager: CacheManager,
         private val deadLetterQueuePort: DeadLetterQueuePort,
         private val meterRegistry: MeterRegistry
 ) {
@@ -104,12 +102,6 @@ class UrlPersistenceEventListener(
                     "[Event] Successfully persisted ${savedMappings.size} short URLs in batch."
                 }
                 successCounter.increment()
-
-                // DB 저장 성공 후 캐시 갱신
-                savedMappings.forEach { mapping ->
-                    cacheManager.getCache("shortUrlCache")?.put(mapping.shortUrl.value, mapping)
-                    cacheManager.getCache("longUrlCache")?.put(mapping.longUrl.value, mapping)
-                }
             }
             is RetryResult.Failure -> {
                 logger.error(result.exception) {

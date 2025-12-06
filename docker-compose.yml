@@ -39,6 +39,15 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
 
+  redis:
+    image: redis:alpine
+    container_name: snowflake-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
 volumes:
   mysql_data:
   grafana_data:
+  redis_data:

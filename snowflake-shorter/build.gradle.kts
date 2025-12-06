@@ -25,8 +25,7 @@ dependencies {
     implementation(libs.kotlinLogging) // Logging
     implementation(libs.kotlinxSerialization) // Kotlin Serialization
     implementation(libs.kotlin.reflect) // Kotlin Reflect
-    implementation(libs.spring.boot.starter.cache) // Cache support
-    implementation(libs.kaffeine) // Caffeine cache support
+    implementation(libs.spring.boot.starter.data.redis) // Redis Reactive support (Lettuce included)
 
     // JPA & QueryDSL dependencies (REQUIRED for snowflake-app to compile and test)
     implementation(libs.spring.boot.starter.data.jpa) // Required for @Entity, @Repository etc.
