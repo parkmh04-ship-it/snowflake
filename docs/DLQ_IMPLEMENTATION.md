@@ -42,11 +42,14 @@ Snowflake URL Shortener에 **Dead Letter Queue** 패턴을 구현하여 일시�
 
 ### 4. **퍼시스턴스 계층** (`adapter/outbound/persistence`)
 - **`FailedEventEntity`**: JPA 엔티티
+  - **`data class`**로 변경하여 간결성 및 불변성 확보
+  - JPA 호환성을 위해 모든 필드에 기본값 제공
   - 인덱스: `idx_status`, `idx_failed_at`, `idx_status_retry_count`
   - `toDomain()`, `fromDomain()` 변환 메서드
 
 - **`FailedEventRepository`**: JPA Repository
   - 커스텀 쿼리: `findRetryableEvents()`, `deleteResolvedOlderThan()`
+  - **`@Modifying` 쿼리에 `@Transactional` 적용**으로 데이터 무결성 보장
 
 - **`DeadLetterQueueAdapter`**: Port 구현체
   - `Dispatchers.IO`로 블로킹 호출 격리

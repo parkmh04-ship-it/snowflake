@@ -17,6 +17,7 @@ spotless = "6.25.0"
 springMockk = "4.0.2"
 jakartaAnnotationApi = "2.1.1"
 jakartaPersistenceApi = "3.1.0"
+testcontainers = "1.19.3"
 
 [libraries]
 # Additions for snowflake-core
@@ -53,6 +54,12 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref =
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator", version.ref = "springBoot" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
 
+# Testcontainers for integration testing
+testcontainers-mysql = { module = "org.testcontainers:mysql", version.ref = "testcontainers" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+
+# H2 Database for in-memory integration testing
+h2 = { module = "com.h2database:h2", version = "2.2.224" }
 
 # Libraries can be bundled together for easier import
 [bundles]
@@ -64,4 +71,6 @@ springBoot = { id = "org.springframework.boot", version.ref = "springBoot" }
 
 kotlinSpring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinJpa = { id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+

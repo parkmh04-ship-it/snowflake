@@ -5,9 +5,9 @@ DROP TABLE IF EXISTS shortener_history;
 CREATE TABLE shortener_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     short_url VARCHAR(255) NOT NULL UNIQUE,
-    long_url TEXT NOT NULL,
+    long_url VARCHAR(1000) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_long_url (long_url(255))
+    INDEX idx_long_url (long_url)
 );
 
 -- 기존 worker_node 테이블 삭제
@@ -23,16 +23,6 @@ CREATE TABLE IF NOT EXISTS snowflake_workers (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_status (status)
 );
-
--- 초기 데이터 256개 삽입 (worker_num: 0 ~ 255)
--- H2 Database, MariaDB, MySQL 등에서 재귀 CTE를 지원하는 경우 사용 가능
-INSERT INTO snowflake_workers (worker_num, worker_name, status)
-WITH RECURSIVE nums(n) AS (
-  SELECT 0
-  UNION ALL
-  SELECT n + 1 FROM nums WHERE n < 255
-)
-SELECT n, 'NONE', 'IDLE' FROM nums;
 
 -- Dead Letter Queue를 위한 failed_events 테이블 생성
 DROP TABLE IF EXISTS failed_events;
@@ -50,3 +40,14 @@ CREATE TABLE failed_events (
     INDEX idx_failed_at (failed_at),
     INDEX idx_status_retry_count (status, retry_count)
 );
+
+
+-- 초기 데이터 256개 삽입 (worker_num: 0 ~ 255)
+-- H2 Database, MariaDB, MySQL 등에서 재귀 CTE를 지원하는 경우 사용 가능
+--INSERT INTO snowflake_workers (worker_num, worker_name, status)
+--WITH RECURSIVE nums(n) AS (
+--  SELECT 0
+--  UNION ALL
+--  SELECT n + 1 FROM nums WHERE n < 255
+--)
+--SELECT n, 'NONE', 'IDLE' FROM nums;

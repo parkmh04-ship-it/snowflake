@@ -216,6 +216,47 @@ SELECT status, COUNT(*) as count FROM failed_events GROUP BY status;
 *   10초 만에 1000 VU까지 급격히 부하를 증가시킵니다.
 *   시스템이 고부하 상태에서 생존하는지, 그리고 부하가 줄어들 때 정상적으로 회복하는지 확인합니다.
 
+## 🧪 테스트 (Testing)
+
+### 단위 테스트 (Unit Tests)
+
+프로젝트는 핵심 비즈니스 로직에 대한 포괄적인 단위 테스트를 포함합니다.
+
+#### 테스트 실행
+```bash
+# 전체 테스트 실행
+./gradlew :snowflake-shorter:test
+
+# 특정 테스트만 실행
+./gradlew :snowflake-shorter:test --tests "RetryFailedEventsUseCaseTest"
+```
+
+#### 주요 테스트
+- **`RetryFailedEventsUseCaseTest`**: DLQ 재처리 로직 검증 (5개 테스트)
+  - 재시도 가능 이벤트 조회
+  - 재시도 성공/실패 시나리오
+  - 최대 재시도 초과 처리
+  - 오래된 이벤트 정리
+
+#### 테스트 커버리지
+```bash
+# 커버리지 리포트 생성
+./gradlew :snowflake-shorter:test jacocoTestReport
+
+# 리포트 확인
+open snowflake-shorter/build/reports/jacoco/test/html/index.html
+```
+
+### 통합 테스트 (Integration Tests)
+
+통합 테스트 코드는 작성되어 있으나, Snowflake Worker 초기화 이슈로 현재 실행이 보류된 상태입니다.
+
+**작성된 통합 테스트**:
+- `UrlShortenerIntegrationTest`: URL 단축 전체 흐름 (7개 테스트)
+- `DeadLetterQueueIntegrationTest`: DLQ 전체 흐름 (9개 테스트)
+
+자세한 내용은 [`docs/INTEGRATION_TESTS.md`](docs/INTEGRATION_TESTS.md)를 참고하세요.
+
 ### 3. 테스트 시나리오
 프로젝트는 목적에 맞는 다양한 테스트 스크립트를 제공합니다.
 

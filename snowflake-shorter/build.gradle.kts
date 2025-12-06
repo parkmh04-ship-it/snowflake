@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.springBoot)
     alias(libs.plugins.kotlinSpring)
     alias(libs.plugins.spotless)
+    alias(libs.plugins.kotlinJpa)
     kotlin("kapt") // Keep kapt for annotation processing
     jacoco
 }
@@ -50,6 +51,13 @@ dependencies {
     testImplementation(libs.mockk) // Mocking framework
     testImplementation(libs.spring.mockk) // Spring integration for MockK
     testImplementation(libs.kotlinxCoroutinesTest) // Coroutines testing
+    
+    // H2 Database for in-memory integration testing
+    testImplementation(libs.h2)
+    
+    // Testcontainers for integration testing (Docker 연결 이슈로 H2 사용)
+    // testImplementation(libs.testcontainers.mysql)
+    // testImplementation(libs.testcontainers.junit.jupiter)
 }
 
 tasks.withType<Test> {

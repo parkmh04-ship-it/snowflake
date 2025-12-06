@@ -10,6 +10,7 @@ import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import java.net.InetAddress
 import java.util.*
 
@@ -27,6 +28,7 @@ class IdGeneratorConfig(
      * 동기적으로 실행되어야 하는 Configuration 빈 생성을 위해 Repository의 @Transactional 메소드를 직접 호출합니다.
      */
     @Bean
+    @Profile("!test")
     fun assignedWorkerInfo(): AssignedWorkerInfo {
         val instanceId = "${InetAddress.getLocalHost().hostName}-${UUID.randomUUID()}"
         val requiredCount = properties.workerThreadCount
