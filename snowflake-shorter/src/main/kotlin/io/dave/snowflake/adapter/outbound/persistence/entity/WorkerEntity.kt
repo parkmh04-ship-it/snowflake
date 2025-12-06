@@ -1,5 +1,6 @@
 package io.dave.snowflake.adapter.outbound.persistence.entity
 
+import io.dave.snowflake.domain.model.Worker
 import io.dave.snowflake.domain.model.WorkerStatus
 import jakarta.persistence.*
 import org.springframework.data.annotation.CreatedDate
@@ -10,7 +11,7 @@ import java.time.LocalDateTime
 @Entity
 @Table(name = "snowflake_workers")
 @EntityListeners(AuditingEntityListener::class)
-class WorkerEntity(
+data class WorkerEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
@@ -33,5 +34,27 @@ class WorkerEntity(
     @Column(nullable = false)
     var updatedAt: LocalDateTime? = null
 ) {
-    protected constructor() : this(null, 0, "", WorkerStatus.ACTIVE, null, null)
+    fun toDomain(): Worker {
+        return Worker(
+            id = id,
+            workerNum = workerNum,
+            workerName = workerName,
+            status = status,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+        )
+    }
+
+    companion object {
+        fun fromDomain(worker: Worker): WorkerEntity {
+            return WorkerEntity(
+                id = worker.id,
+                workerNum = worker.workerNum,
+                workerName = worker.workerName,
+                status = worker.status,
+                createdAt = worker.createdAt,
+                updatedAt = worker.updatedAt
+            )
+        }
+    }
 }

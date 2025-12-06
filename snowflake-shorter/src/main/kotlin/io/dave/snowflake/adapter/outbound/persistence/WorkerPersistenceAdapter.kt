@@ -45,7 +45,7 @@ class WorkerPersistenceAdapter(
 
     override fun saveAll(workers: Flow<Worker>): Flow<Worker> {
         return kotlinx.coroutines.flow.flow {
-            val entities = workers.toList().map { it.toEntity() }
+            val entities = workers.toList().map { WorkerEntity.fromDomain(it) }
             if (entities.isNotEmpty()) {
                 val savedEntities = withContext(Dispatchers.IO) {
                     workerRepository.saveAll(entities)
@@ -53,25 +53,5 @@ class WorkerPersistenceAdapter(
                 savedEntities.forEach { emit(it.toDomain()) }
             }
         }
-    }
-
-    companion object {
-        fun WorkerEntity.toDomain(): Worker = Worker(
-            id = id,
-            workerNum = workerNum,
-            workerName = workerName,
-            status = status,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-        )
-
-        fun Worker.toEntity(): WorkerEntity = WorkerEntity(
-            id = id,
-            workerNum = workerNum,
-            workerName = workerName,
-            status = status,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-        )
     }
 }

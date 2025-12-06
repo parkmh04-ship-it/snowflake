@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Transactional
 
 /** FailedEvent 엔티티에 대한 JPA Repository입니다. */
 @Repository
@@ -28,6 +29,7 @@ interface FailedEventRepository : JpaRepository<FailedEventEntity, Long> {
 
     /** RESOLVED 상태의 오래된 이벤트를 삭제합니다. */
     @Modifying
+    @Transactional
     @Query(
             """
         DELETE FROM FailedEventEntity e 

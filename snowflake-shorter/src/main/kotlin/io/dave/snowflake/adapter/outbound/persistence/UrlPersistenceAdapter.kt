@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Repository
-import java.time.ZoneId
 
 @Repository
 class UrlPersistenceAdapter(
@@ -20,7 +19,7 @@ class UrlPersistenceAdapter(
 ) : UrlPort {
 
     override suspend fun save(mapping: UrlMapping): UrlMapping = withContext(Dispatchers.IO) {
-        val entity = mapping.toEntity()
+        val entity = ShortUrlEntity.fromDomain(mapping)
         val savedEntity = repository.save(entity)
         savedEntity.toDomain()
     }
@@ -29,7 +28,7 @@ class UrlPersistenceAdapter(
         // Flow는 비동기 스트림이므로, 수집(collect)하여 리스트로 만든 뒤 배치 저장하고 다시 Flow로 변환
         // 주의: saveAll은 블로킹이므로 flow 빌더 내부에서 Dispatchers.IO로 감싸야 함
         return kotlinx.coroutines.flow.flow {
-            val entities = mappings.toList().map { it.toEntity() }
+            val entities = mappings.toList().map { ShortUrlEntity.fromDomain(it) }
             if (entities.isNotEmpty()) {
                 val savedEntities = withContext(Dispatchers.IO) {
                     repository.saveAll(entities)
@@ -51,18 +50,5 @@ class UrlPersistenceAdapter(
 
     override suspend fun existsByShortUrl(shortUrl: ShortUrl): Boolean = withContext(Dispatchers.IO) {
         repository.findByShortUrl(shortUrl.value) != null
-    }
-
-    companion object {
-        fun UrlMapping.toEntity(): ShortUrlEntity = ShortUrlEntity(
-            shortUrl = this.shortUrl.value,
-            longUrl = this.longUrl.value
-        )
-
-        fun ShortUrlEntity.toDomain(): UrlMapping = UrlMapping(
-            shortUrl = ShortUrl(this.shortUrl),
-            longUrl = LongUrl(this.longUrl),
-            createdAt = this.createdAt?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli() ?: 0L
-        )
     }
 }
