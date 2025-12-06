@@ -11,9 +11,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.web.client.TestRestTemplate
-import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseEntity
 
 /**
  * URL 단축 및 조회 기능에 대한 통합 테스트입니다.
@@ -26,24 +23,12 @@ import org.springframework.http.ResponseEntity
 @DisplayName("URL 단축 서비스 통합 테스트")
 class UrlShortenerIntegrationTest : IntegrationTestBase() {
 
-    @Autowired private lateinit var restTemplate: TestRestTemplate
+    @Autowired
+    private lateinit var webTestClient: org.springframework.test.web.reactive.server.WebTestClient
 
     @Autowired private lateinit var shortUrlRepository: ShortUrlRepository
 
     @Autowired private lateinit var urlPort: UrlPort
-
-    @org.junit.jupiter.api.BeforeEach
-    fun setup() {
-        restTemplate.restTemplate.requestFactory = NoRedirectClientHttpRequestFactory()
-    }
-
-    class NoRedirectClientHttpRequestFactory :
-            org.springframework.http.client.SimpleClientHttpRequestFactory() {
-        override fun prepareConnection(connection: java.net.HttpURLConnection, httpMethod: String) {
-            super.prepareConnection(connection, httpMethod)
-            connection.instanceFollowRedirects = false
-        }
-    }
 
     @Test
     @DisplayName("URL을 단축하고 데이터베이스에 저장된다")
@@ -53,14 +38,22 @@ class UrlShortenerIntegrationTest : IntegrationTestBase() {
         val request = ShortenRequest(originalUrl)
 
         // when
-        val response: ResponseEntity<ShortenResponse> =
-                restTemplate.postForEntity("/shorten", request, ShortenResponse::class.java)
+        val result =
+                webTestClient
+                        .post()
+                        .uri("/shorten")
+                        .bodyValue(request)
+                        .exchange()
+                        .expectStatus()
+                        .isCreated
+                        .expectBody(ShortenResponse::class.java)
+                        .returnResult()
+                        .responseBody
 
         // then
-        assertEquals(HttpStatus.CREATED, response.statusCode)
-        assertNotNull(response.body)
-        assertNotNull(response.body?.shortUrl)
-        assertTrue(response.body!!.shortUrl.startsWith("http://"))
+        assertNotNull(result)
+        assertNotNull(result?.shortUrl)
+        assertTrue(result!!.shortUrl.startsWith("http://"))
 
         // 이벤트 처리 대기 (비동기 배치 처리)
         delay(200)
@@ -79,23 +72,33 @@ class UrlShortenerIntegrationTest : IntegrationTestBase() {
         val request = ShortenRequest(originalUrl)
 
         // URL 단축
-        val shortenResponse: ResponseEntity<ShortenResponse> =
-                restTemplate.postForEntity("/shorten", request, ShortenResponse::class.java)
+        val shortenResponse =
+                webTestClient
+                        .post()
+                        .uri("/shorten")
+                        .bodyValue(request)
+                        .exchange()
+                        .expectStatus()
+                        .isCreated
+                        .expectBody(ShortenResponse::class.java)
+                        .returnResult()
+                        .responseBody!!
 
-        assertNotNull(shortenResponse.body)
-        val shortUrl = shortenResponse.body!!.shortUrl
+        val shortUrl = shortenResponse.shortUrl
         val shortUrlKey = shortUrl.substringAfterLast("/")
 
         // 이벤트 처리 대기
         delay(200)
 
-        // when - 리다이렉트 확인 (TestRestTemplate은 기본적으로 리다이렉트를 따라가지 않음)
-        val redirectResponse: ResponseEntity<String> =
-                restTemplate.getForEntity("/shorten/$shortUrlKey", String::class.java)
-
-        // then
-        assertEquals(HttpStatus.FOUND, redirectResponse.statusCode)
-        assertEquals(originalUrl, redirectResponse.headers.location?.toString())
+        // when - 리다이렉트 확인
+        webTestClient
+                .get()
+                .uri("/shorten/$shortUrlKey")
+                .exchange()
+                .expectStatus()
+                .isFound
+                .expectHeader()
+                .valueEquals("Location", originalUrl)
     }
 
     @Test
@@ -104,12 +107,13 @@ class UrlShortenerIntegrationTest : IntegrationTestBase() {
         // given
         val nonExistentShortUrl = "nonexistent123"
 
-        // when
-        val response: ResponseEntity<String> =
-                restTemplate.getForEntity("/shorten/$nonExistentShortUrl", String::class.java)
-
-        // then
-        assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
+        // when & then
+        webTestClient
+                .get()
+                .uri("/shorten/$nonExistentShortUrl")
+                .exchange()
+                .expectStatus()
+                .isNotFound
     }
 
     @Test
@@ -120,20 +124,47 @@ class UrlShortenerIntegrationTest : IntegrationTestBase() {
         val request = ShortenRequest(originalUrl)
 
         // when - 동일한 URL을 3번 단축
-        val response1 = restTemplate.postForEntity("/shorten", request, ShortenResponse::class.java)
-        val response2 = restTemplate.postForEntity("/shorten", request, ShortenResponse::class.java)
-        val response3 = restTemplate.postForEntity("/shorten", request, ShortenResponse::class.java)
+        val response1 =
+                webTestClient
+                        .post()
+                        .uri("/shorten")
+                        .bodyValue(request)
+                        .exchange()
+                        .expectStatus()
+                        .isCreated
+                        .expectBody(ShortenResponse::class.java)
+                        .returnResult()
+                        .responseBody!!
 
-        // then
-        assertEquals(HttpStatus.CREATED, response1.statusCode)
-        assertEquals(HttpStatus.CREATED, response2.statusCode)
-        assertEquals(HttpStatus.CREATED, response3.statusCode)
+        val response2 =
+                webTestClient
+                        .post()
+                        .uri("/shorten")
+                        .bodyValue(request)
+                        .exchange()
+                        .expectStatus()
+                        .isCreated
+                        .expectBody(ShortenResponse::class.java)
+                        .returnResult()
+                        .responseBody!!
 
-        val shortUrl1 = response1.body!!.shortUrl
-        val shortUrl2 = response2.body!!.shortUrl
-        val shortUrl3 = response3.body!!.shortUrl
+        val response3 =
+                webTestClient
+                        .post()
+                        .uri("/shorten")
+                        .bodyValue(request)
+                        .exchange()
+                        .expectStatus()
+                        .isCreated
+                        .expectBody(ShortenResponse::class.java)
+                        .returnResult()
+                        .responseBody!!
 
-        // 각각 다른 단축 URL이 생성되어야 함
+        val shortUrl1 = response1.shortUrl
+        val shortUrl2 = response2.shortUrl
+        val shortUrl3 = response3.shortUrl
+
+        // then - 각각 다른 단축 URL이 생성되어야 함
         assertNotEquals(shortUrl1, shortUrl2)
         assertNotEquals(shortUrl2, shortUrl3)
         assertNotEquals(shortUrl1, shortUrl3)
@@ -154,24 +185,39 @@ class UrlShortenerIntegrationTest : IntegrationTestBase() {
         val request = ShortenRequest(originalUrl)
 
         val shortenResponse =
-                restTemplate.postForEntity("/shorten", request, ShortenResponse::class.java)
+                webTestClient
+                        .post()
+                        .uri("/shorten")
+                        .bodyValue(request)
+                        .exchange()
+                        .expectBody(ShortenResponse::class.java)
+                        .returnResult()
+                        .responseBody!!
 
-        val shortUrlKey = shortenResponse.body!!.shortUrl.substringAfterLast("/")
+        val shortUrlKey = shortenResponse.shortUrl.substringAfterLast("/")
 
         // 이벤트 처리 및 캐시 갱신 대기
         delay(200)
 
         // when - 첫 번째 조회 (DB에서 조회 후 캐시 저장)
-        val firstAccess = restTemplate.getForEntity("/shorten/$shortUrlKey", String::class.java)
+        webTestClient
+                .get()
+                .uri("/shorten/$shortUrlKey")
+                .exchange()
+                .expectStatus()
+                .isFound
+                .expectHeader()
+                .valueEquals("Location", originalUrl)
 
         // 두 번째 조회 (캐시에서 조회)
-        val secondAccess = restTemplate.getForEntity("/shorten/$shortUrlKey", String::class.java)
-
-        // then
-        assertEquals(HttpStatus.FOUND, firstAccess.statusCode)
-        assertEquals(HttpStatus.FOUND, secondAccess.statusCode)
-        assertEquals(originalUrl, firstAccess.headers.location?.toString())
-        assertEquals(originalUrl, secondAccess.headers.location?.toString())
+        webTestClient
+                .get()
+                .uri("/shorten/$shortUrlKey")
+                .exchange()
+                .expectStatus()
+                .isFound
+                .expectHeader()
+                .valueEquals("Location", originalUrl)
     }
 
     @Test
@@ -180,12 +226,14 @@ class UrlShortenerIntegrationTest : IntegrationTestBase() {
         // given
         val invalidRequest = ShortenRequest("invalid-url")
 
-        // when
-        val response: ResponseEntity<String> =
-                restTemplate.postForEntity("/shorten", invalidRequest, String::class.java)
-
-        // then
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        // when & then
+        webTestClient
+                .post()
+                .uri("/shorten")
+                .bodyValue(invalidRequest)
+                .exchange()
+                .expectStatus()
+                .isBadRequest
     }
 
     @Test
@@ -196,9 +244,16 @@ class UrlShortenerIntegrationTest : IntegrationTestBase() {
         val request = ShortenRequest(originalUrl)
 
         val shortenResponse =
-                restTemplate.postForEntity("/shorten", request, ShortenResponse::class.java)
+                webTestClient
+                        .post()
+                        .uri("/shorten")
+                        .bodyValue(request)
+                        .exchange()
+                        .expectBody(ShortenResponse::class.java)
+                        .returnResult()
+                        .responseBody!!
 
-        val shortUrlKey = shortenResponse.body!!.shortUrl.substringAfterLast("/")
+        val shortUrlKey = shortenResponse.shortUrl.substringAfterLast("/")
 
         // 이벤트 처리 대기
         delay(200)

@@ -19,4 +19,5 @@ import org.springframework.test.context.ActiveProfiles
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import(TestSnowflakeConfig::class)
+@org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 abstract class IntegrationTestBase
