@@ -45,7 +45,7 @@ Spring WebFlux는 기본적으로 Reactor를 사용하지만, 우리는 **Kotlin
 ### WebFlux 환경에서 왜 R2DBC가 아닌 JPA(JDBC)인가?
 완전한 Non-blocking 스택인 R2DBC 대신, **JPA (Hibernate)**를 선택했습니다.
 *   **성숙도와 생태계**: JPA의 강력한 ORM 기능, 캐싱, 더티 체킹 등 성숙한 기능을 활용하여 개발 생산성을 높입니다.
-*   **Blocking I/O 처리**: JDBC는 Blocking API이므로, **`Dispatchers.IO`** 컨텍스트로 감싸서 실행하여 WebFlux의 Event Loop(Netty)가 차단되지 않도록 철저히 격리했습니다.
+*   **Blocking I/O 처리**: JDBC는 Blocking API이므로, **`virtualDispatcher`** 컨텍스트로 감싸서 실행하여 WebFlux의 Event Loop(Netty)가 차단되지 않도록 철저히 격리했습니다.
 
 ### 왜 JPA 엔티티에 Data Class를 사용하는가?
 *   **간결성**: Boilerplate 코드(Getter/Setter, equals/hashCode) 제거

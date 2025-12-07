@@ -9,13 +9,14 @@ import io.dave.snowflake.domain.util.retryWithExponentialBackoffCatching
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 
@@ -32,10 +33,11 @@ import org.springframework.stereotype.Component
 class UrlPersistenceEventListener(
         private val urlPort: UrlPort,
         private val deadLetterQueuePort: DeadLetterQueuePort,
-        private val meterRegistry: MeterRegistry
+        private val meterRegistry: MeterRegistry,
+        @Qualifier("virtualThreadDispatcher") private val dispatcher: CoroutineDispatcher
 ) {
     private val logger = KotlinLogging.logger {}
-    private val eventProcessingScope = CoroutineScope(Dispatchers.IO) // 별도의 IO 디스패처에서 이벤트 처리
+    private val eventProcessingScope = CoroutineScope(dispatcher) // Virtual Thread 디스패처에서 이벤트 처리
     private val eventChannel = Channel<ShortUrlCreatedEvent>(Channel.UNLIMITED) // 무제한 버퍼를 가진 채널
 
     // 메트릭 카운터

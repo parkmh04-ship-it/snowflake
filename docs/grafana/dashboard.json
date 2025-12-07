@@ -982,6 +982,98 @@
       "type": "timeseries"
     },
     {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 16,
+        "x": 8,
+        "y": 37
+      },
+      "id": 100,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "executor_active_threads{name=\"virtual_thread_executor\", application=\"$application\"}",
+          "legendFormat": "Active Threads",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(executor_seconds_sum{name=\"virtual_thread_executor\", application=\"$application\"}[1m]) / rate(executor_seconds_count{name=\"virtual_thread_executor\", application=\"$application\"}[1m])",
+          "legendFormat": "Avg Execution Time",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(executor_idle_seconds_sum{name=\"virtual_thread_executor\", application=\"$application\"}[1m]) / rate(executor_idle_seconds_count{name=\"virtual_thread_executor\", application=\"$application\"}[1m])",
+          "legendFormat": "Avg Idle Time",
+          "refId": "C"
+        },
+        {
+          "expr": "rate(executor_seconds_count{name=\"virtual_thread_executor\", application=\"$application\"}[1m])",
+          "legendFormat": "Completed Tasks/s",
+          "refId": "D"
+        }
+      ],
+      "title": "Virtual Thread Executor Metrics",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,

@@ -6,4 +6,8 @@ spring:
       - database
       - doc
       - logging
+      - logging
       - metric
+  threads:
+    virtual:
+      enabled: true

@@ -7,24 +7,26 @@ import io.dave.snowflake.domain.model.LongUrl
 import io.dave.snowflake.domain.model.ShortUrl
 import io.dave.snowflake.domain.model.UrlMapping
 import io.dave.snowflake.domain.port.outbound.UrlPort
-import kotlinx.coroutines.Dispatchers
+import java.time.Duration
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.withContext
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Repository
-import java.time.Duration
 
 @Repository
 class UrlPersistenceAdapter(
-    private val repository: ShortUrlRepository,
-    private val reactiveRedisTemplate: ReactiveRedisTemplate<String, String>,
-    private val objectMapper: ObjectMapper
+        private val repository: ShortUrlRepository,
+        private val reactiveRedisTemplate: ReactiveRedisTemplate<String, String>,
+        private val objectMapper: ObjectMapper,
+        @Qualifier("virtualThreadDispatcher") private val dispatcher: CoroutineDispatcher
 ) : UrlPort {
 
     override suspend fun save(mapping: UrlMapping): UrlMapping =
-            withContext(Dispatchers.IO) {
+            withContext(dispatcher) {
                 val entity = ShortUrlEntity.fromDomain(mapping)
                 val savedEntity = repository.save(entity)
                 val domain = savedEntity.toDomain()
@@ -39,7 +41,7 @@ class UrlPersistenceAdapter(
         return kotlinx.coroutines.flow.flow {
             val entities = mappings.toList().map { ShortUrlEntity.fromDomain(it) }
             if (entities.isNotEmpty()) {
-                val savedEntities = withContext(Dispatchers.IO) { repository.saveAll(entities) }
+                val savedEntities = withContext(dispatcher) { repository.saveAll(entities) }
                 savedEntities.forEach {
                     val domain = it.toDomain()
                     cacheUrlMapping(domain)
@@ -85,7 +87,7 @@ class UrlPersistenceAdapter(
         val hasKey = reactiveRedisTemplate.hasKey(key).awaitSingleOrNull() ?: false
         if (hasKey) return true
 
-        return withContext(Dispatchers.IO) { repository.findByShortUrl(shortUrl.value) != null }
+        return withContext(dispatcher) { repository.findByShortUrl(shortUrl.value) != null }
     }
 
     private suspend fun findAndCache(
@@ -93,7 +95,7 @@ class UrlPersistenceAdapter(
             key: String,
             dbQuery: (String) -> ShortUrlEntity?
     ): UrlMapping? =
-            withContext(Dispatchers.IO) {
+            withContext(dispatcher) {
                 val entity = dbQuery(identifier)
                 val domain = entity?.toDomain()
                 if (domain != null) {
