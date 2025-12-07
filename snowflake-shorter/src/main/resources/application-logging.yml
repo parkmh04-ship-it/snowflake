@@ -1,16 +1,7 @@
 spring:
   config:
     activate:
-      on-profile: alpha
-logging:
-  level:
-    root: DEBUG
-
----
-spring:
-  config:
-    activate:
-      on-profile: beta
+      on-profile: alpha, beta
 logging:
   level:
     root: INFO

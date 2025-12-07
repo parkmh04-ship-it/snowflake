@@ -2,15 +2,15 @@ package io.dave.snowflake.adapter.outbound.persistence
 
 import io.dave.snowflake.adapter.outbound.persistence.entity.FailedEventsEntity
 import io.dave.snowflake.adapter.outbound.persistence.repository.FailedEventRepository
+import io.dave.snowflake.config.IOX
 import io.dave.snowflake.domain.model.FailedEvent
 import io.dave.snowflake.domain.model.FailedEventStatus
 import io.dave.snowflake.domain.port.outbound.DeadLetterQueuePort
-import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
@@ -18,14 +18,13 @@ import org.springframework.transaction.annotation.Transactional
 @Component
 class DeadLetterQueueAdapter(
     private val failedEventRepository: FailedEventRepository,
-    @param:Qualifier("virtualThreadDispatcher")
-    private val virtualThreadDispatcher: CoroutineDispatcher
+
 ) :
     DeadLetterQueuePort {
 
     @Transactional
     override suspend fun save(failedEvent: FailedEvent): FailedEvent =
-        withContext(virtualThreadDispatcher) {
+        withContext(Dispatchers.IOX) {
             val entity = FailedEventsEntity.fromDomain(failedEvent)
             val savedEntity = failedEventRepository.save(entity)
             savedEntity.toDomain()
@@ -34,7 +33,7 @@ class DeadLetterQueueAdapter(
     @Transactional
     override fun saveAll(failedEvents: Flow<FailedEvent>): Flow<FailedEvent> {
         return failedEvents.map { failedEvent ->
-            withContext(virtualThreadDispatcher) {
+            withContext(Dispatchers.IOX) {
                 val entity = FailedEventsEntity.fromDomain(failedEvent)
                 val savedEntity = failedEventRepository.save(entity)
                 savedEntity.toDomain()
@@ -62,7 +61,7 @@ class DeadLetterQueueAdapter(
 
     @Transactional
     override suspend fun update(failedEvent: FailedEvent): FailedEvent =
-        withContext(virtualThreadDispatcher) {
+        withContext(Dispatchers.IOX) {
             require(failedEvent.id != null) { "FailedEvent ID must not be null for update" }
             val entity = FailedEventsEntity.fromDomain(failedEvent)
             val updatedEntity = failedEventRepository.save(entity)
@@ -71,11 +70,11 @@ class DeadLetterQueueAdapter(
 
     @Transactional
     override suspend fun deleteById(id: Long): Unit =
-        withContext(virtualThreadDispatcher) { failedEventRepository.deleteById(id) }
+        withContext(Dispatchers.IOX) { failedEventRepository.deleteById(id) }
 
     @Transactional
     override suspend fun deleteResolvedOlderThan(olderThanMillis: Long): Int =
-        withContext(virtualThreadDispatcher) {
+        withContext(Dispatchers.IOX) {
             failedEventRepository.deleteResolvedOlderThan(olderThanMillis)
         }
 }

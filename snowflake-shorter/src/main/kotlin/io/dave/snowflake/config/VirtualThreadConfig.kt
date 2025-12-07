@@ -3,6 +3,7 @@ package io.dave.snowflake.config
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.java21.instrument.binder.jdk.VirtualThreadMetrics
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
@@ -13,14 +14,25 @@ import java.util.concurrent.Executors
 @Configuration
 class VirtualThreadConfig {
 
+//    @Bean("virtualThreadExecutor")
+//    fun virtualThreadExecutor(meterRegistry: MeterRegistry): ExecutorService =
+//        Executors.newVirtualThreadPerTaskExecutor().also { VirtualThreadMetrics().bindTo(meterRegistry) }
+//
+//    @Bean("virtualThreadDispatcher")
+//    fun virtualThreadDispatcher(
+//        @Qualifier("virtualThreadExecutor")
+//        executor: ExecutorService
+//    ): CoroutineDispatcher = executor.asCoroutineDispatcher()
+
     @Bean("virtualThreadExecutor")
     fun virtualThreadExecutor(meterRegistry: MeterRegistry): ExecutorService =
-        Executors.newVirtualThreadPerTaskExecutor().also { VirtualThreadMetrics().bindTo(meterRegistry) }
-
-    @Bean("virtualThreadDispatcher")
-    fun virtualThreadDispatcher(
-        @Qualifier("virtualThreadExecutor")
-        executor: ExecutorService
-    ): CoroutineDispatcher = executor.asCoroutineDispatcher()
+        virtualTaskExecutor.also { VirtualThreadMetrics().bindTo(meterRegistry) }
 }
 
+
+
+
+private val virtualTaskExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+val Dispatchers.IOX: CoroutineDispatcher
+    get() = virtualTaskExecutor.asCoroutineDispatcher() 
