@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS shorter_history;
 -- shorter_history 테이블 생성 (인덱스 포함)
 CREATE TABLE shorter_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    short_url VARCHAR(255) NOT NULL UNIQUE,
+    short_url VARCHAR(255) COLLATE utf8mb4_bin NOT NULL UNIQUE,
     long_url VARCHAR(4000) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_long_url (long_url)
