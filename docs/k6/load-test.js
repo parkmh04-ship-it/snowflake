@@ -13,7 +13,7 @@ export const options = {
 export default function () {
   const url = 'http://localhost:8080/shorten';
   // 랜덤 문자열을 사용하여 매번 새로운 URL 생성
-  const uniqueUrl = `https://example.com/${randomString(10)}-${Date.now()}`;
+  const uniqueUrl = `https://example.com/${randomString(20)}-${Date.now()}`;
   
   const payload = JSON.stringify({
     url: uniqueUrl,

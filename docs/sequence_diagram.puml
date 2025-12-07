@@ -1,13 +1,13 @@
 @startuml
 autonumber
 
-title Snowflake URL Shortener Sequences (Hexagonal & DDD)
+title Snowflake URL Shorter Sequences (Hexagonal & DDD)
 
 actor Client
 participant "Scheduler" as Scheduler
 
 box "Adapter (Inbound) - WebFlux" #LightBlue
-    participant "ShortenerHandler" as Handler
+    participant "ShorterHandler" as Handler
 end box
 
 box "Application Layer - Usecase" #LightYellow

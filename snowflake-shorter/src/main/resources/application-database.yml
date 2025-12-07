@@ -22,7 +22,7 @@ spring:
 spring:
   config:
     activate:
-      on-profile: infra
+      on-profile: alpha, beta
   datasource:
     url: jdbc:mysql://127.0.0.1:3306/mydatabase?allowPublicKeyRetrieval=true&useSSL=false
     username: app_rw

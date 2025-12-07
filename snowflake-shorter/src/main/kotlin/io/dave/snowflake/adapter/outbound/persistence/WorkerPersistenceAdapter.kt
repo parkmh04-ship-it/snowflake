@@ -1,25 +1,28 @@
 package io.dave.snowflake.adapter.outbound.persistence
 
-import io.dave.snowflake.adapter.outbound.persistence.entity.WorkerEntity
+import io.dave.snowflake.adapter.outbound.persistence.entity.SnowflakeWorkersEntity
 import io.dave.snowflake.adapter.outbound.persistence.repository.WorkerRepository
-import io.dave.snowflake.config.virtualDispatcher
 import io.dave.snowflake.domain.model.Worker
 import io.dave.snowflake.domain.model.WorkerStatus
 import io.dave.snowflake.domain.port.outbound.WorkerPort
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
 @Component
 class WorkerPersistenceAdapter(
-    private val workerRepository: WorkerRepository
+    private val workerRepository: WorkerRepository,
+    @param:Qualifier("virtualThreadDispatcher")
+    private val virtualThreadDispatcher: CoroutineDispatcher
 ) : WorkerPort {
 
     override fun findByWorkerNums(workerNums: List<Long>): Flow<Worker> {
         return kotlinx.coroutines.flow.flow {
-            val entities = withContext(virtualDispatcher) {
+            val entities = withContext(virtualThreadDispatcher) {
                 workerRepository.findByWorkerNumIn(workerNums)
             }
             entities.forEach { emit(it.toDomain()) }
@@ -28,7 +31,7 @@ class WorkerPersistenceAdapter(
 
     override fun findByStatusAndUpdatedAtBefore(status: WorkerStatus, updatedAt: LocalDateTime): Flow<Worker> {
         return kotlinx.coroutines.flow.flow {
-            val entities = withContext(virtualDispatcher) {
+            val entities = withContext(virtualThreadDispatcher) {
                 workerRepository.findByStatusAndUpdatedAtBefore(status, updatedAt)
             }
             entities.forEach { emit(it.toDomain()) }
@@ -36,20 +39,20 @@ class WorkerPersistenceAdapter(
     }
 
     override suspend fun updateUpdatedAt(workerNums: List<Long>, updatedAt: LocalDateTime): Int =
-        withContext(virtualDispatcher) {
+        withContext(virtualThreadDispatcher) {
             workerRepository.updateUpdatedAtByWorkerNums(workerNums, updatedAt)
         }
 
     override suspend fun cleanseWorkers(workerNums: List<Long>, updatedAt: LocalDateTime): Int =
-        withContext(virtualDispatcher) {
+        withContext(virtualThreadDispatcher) {
             workerRepository.cleanseWorkers(workerNums, updatedAt)
         }
 
     override fun saveAll(workers: Flow<Worker>): Flow<Worker> {
         return kotlinx.coroutines.flow.flow {
-            val entities = workers.toList().map { WorkerEntity.fromDomain(it) }
+            val entities = workers.toList().map { SnowflakeWorkersEntity.fromDomain(it) }
             if (entities.isNotEmpty()) {
-                val savedEntities = withContext(virtualDispatcher) {
+                val savedEntities = withContext(virtualThreadDispatcher) {
                     workerRepository.saveAll(entities)
                 }
                 savedEntities.forEach { emit(it.toDomain()) }

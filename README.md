@@ -1,8 +1,8 @@
-# ❄️ Snowflake URL Shortener
+# ❄️ Snowflake URL Shorter
 
 > **Global Scale을 지향하는 고성능, 고가용성 URL 단축 서비스**
 
-Snowflake URL Shortener는 Twitter Snowflake 알고리즘과 Hexagonal Architecture를 기반으로 설계된 URL 단축 서비스입니다. 대규모 트래픽 처리를 위한 비동기 아키텍처와 강력한 장애 격리 메커니즘을 갖추고 있습니다.
+Snowflake URL Shorter는 Twitter Snowflake 알고리즘과 Hexagonal Architecture를 기반으로 설계된 URL 단축 서비스입니다. 대규모 트래픽 처리를 위한 비동기 아키텍처와 강력한 장애 격리 메커니즘을 갖추고 있습니다.
 
 ---
 

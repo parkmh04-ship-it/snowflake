@@ -11,7 +11,7 @@ import java.time.LocalDateTime
 @Entity
 @Table(name = "snowflake_workers")
 @EntityListeners(AuditingEntityListener::class)
-data class WorkerEntity(
+data class SnowflakeWorkersEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
@@ -46,8 +46,8 @@ data class WorkerEntity(
     }
 
     companion object {
-        fun fromDomain(worker: Worker): WorkerEntity {
-            return WorkerEntity(
+        fun fromDomain(worker: Worker): SnowflakeWorkersEntity {
+            return SnowflakeWorkersEntity(
                 id = worker.id,
                 workerNum = worker.workerNum,
                 workerName = worker.workerName,

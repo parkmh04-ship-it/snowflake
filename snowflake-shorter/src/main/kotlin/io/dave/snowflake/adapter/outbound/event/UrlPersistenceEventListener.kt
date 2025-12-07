@@ -31,13 +31,15 @@ import org.springframework.stereotype.Component
  */
 @Component
 class UrlPersistenceEventListener(
-        private val urlPort: UrlPort,
-        private val deadLetterQueuePort: DeadLetterQueuePort,
-        private val meterRegistry: MeterRegistry,
-        @Qualifier("virtualThreadDispatcher") private val dispatcher: CoroutineDispatcher
+    private val urlPort: UrlPort,
+    private val deadLetterQueuePort: DeadLetterQueuePort,
+    private val meterRegistry: MeterRegistry,
+    @param:Qualifier("virtualThreadDispatcher")
+    private val virtualThreadDispatcher: CoroutineDispatcher
 ) {
     private val logger = KotlinLogging.logger {}
-    private val eventProcessingScope = CoroutineScope(dispatcher) // Virtual Thread 디스패처에서 이벤트 처리
+    private val eventProcessingScope = CoroutineScope(virtualThreadDispatcher
+    ) // Virtual Thread 디스패처에서 이벤트 처리
     private val eventChannel = Channel<ShortUrlCreatedEvent>(Channel.UNLIMITED) // 무제한 버퍼를 가진 채널
 
     // 메트릭 카운터

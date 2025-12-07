@@ -10,9 +10,9 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 @Entity
-@Table(name = "shortener_history")
+@Table(name = "shorter_history")
 @EntityListeners(AuditingEntityListener::class)
-data class ShortUrlEntity(
+data class ShorterHistoryEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
@@ -36,8 +36,8 @@ data class ShortUrlEntity(
     }
 
     companion object {
-        fun fromDomain(urlMapping: UrlMapping): ShortUrlEntity {
-            return ShortUrlEntity(
+        fun fromDomain(urlMapping: UrlMapping): ShorterHistoryEntity {
+            return ShorterHistoryEntity(
                 shortUrl = urlMapping.shortUrl.value,
                 longUrl = urlMapping.longUrl.value
             )

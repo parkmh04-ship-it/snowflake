@@ -4,7 +4,7 @@ spring:
       on-profile: alpha
 logging:
   level:
-    root: INFO
+    root: DEBUG
 
 ---
 spring:
@@ -13,7 +13,7 @@ spring:
       on-profile: beta
 logging:
   level:
-    root: DEBUG
+    root: INFO
 
 ---
 spring:
@@ -23,4 +23,4 @@ spring:
 logging:
   level:
     root: OFF
-    io.dave.shortener.adapter.outbound.event: OFF
+    io.dave.shorter.adapter.outbound.event: OFF

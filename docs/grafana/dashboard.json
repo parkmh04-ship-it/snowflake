@@ -519,69 +519,12 @@
       "type": "timeseries"
     },
     {
-      "datasource": "${DS_PROMETHEUS}",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 24,
-        "x": 0,
-        "y": 14
-      },
-      "id": 12,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.3.3",
-      "targets": [
-        {
-          "expr": "increase(snowflake_sequence_exhaustion_total{application=\"$application\"}[1m])",
-          "legendFormat": "Exhaustions",
-          "refId": "A"
-        }
-      ],
-      "title": "Sequence Exhaustion Count (Last 1m)",
-      "type": "stat"
-    },
-    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 14
       },
       "id": 9,
       "panels": [],
@@ -641,7 +584,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 15
       },
       "id": 10,
       "options": {
@@ -718,7 +661,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 15
       },
       "id": 11,
       "options": {
@@ -805,7 +748,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 23
       },
       "id": 13,
       "options": {
@@ -863,7 +806,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 23
       },
       "id": 14,
       "options": {
@@ -897,7 +840,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 31
       },
       "id": 35,
       "panels": [],
@@ -957,7 +900,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 37
+        "y": 32
       },
       "id": 34,
       "options": {
@@ -1034,7 +977,7 @@
         "h": 6,
         "w": 16,
         "x": 8,
-        "y": 37
+        "y": 32
       },
       "id": 100,
       "options": {
@@ -1050,27 +993,22 @@
       },
       "targets": [
         {
-          "expr": "executor_active_threads{name=\"virtual_thread_executor\", application=\"$application\"}",
-          "legendFormat": "Active Threads",
+          "expr": "jvm_threads_virtual_live_threads{application=\"$application\"}",
+          "legendFormat": "Live Virtual Threads",
           "refId": "A"
         },
         {
-          "expr": "rate(executor_seconds_sum{name=\"virtual_thread_executor\", application=\"$application\"}[1m]) / rate(executor_seconds_count{name=\"virtual_thread_executor\", application=\"$application\"}[1m])",
-          "legendFormat": "Avg Execution Time",
+          "expr": "jvm_threads_virtual_pool_size_threads{application=\"$application\"}",
+          "legendFormat": "Carrier Pool Size",
           "refId": "B"
         },
         {
-          "expr": "rate(executor_idle_seconds_sum{name=\"virtual_thread_executor\", application=\"$application\"}[1m]) / rate(executor_idle_seconds_count{name=\"virtual_thread_executor\", application=\"$application\"}[1m])",
-          "legendFormat": "Avg Idle Time",
+          "expr": "jvm_threads_virtual_pinned_seconds_max{application=\"$application\"}",
+          "legendFormat": "Max Pinned Time (s)",
           "refId": "C"
-        },
-        {
-          "expr": "rate(executor_seconds_count{name=\"virtual_thread_executor\", application=\"$application\"}[1m])",
-          "legendFormat": "Completed Tasks/s",
-          "refId": "D"
         }
       ],
-      "title": "Virtual Thread Executor Metrics",
+      "title": "Virtual Threads (JDK 21 Native)",
       "type": "timeseries"
     },
     {
@@ -1137,7 +1075,7 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
+        "w": 4,
         "x": 0,
         "y": 39
       },
@@ -1219,8 +1157,8 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 8,
+        "w": 4,
+        "x": 4,
         "y": 39
       },
       "id": 32,
@@ -1243,6 +1181,148 @@
         }
       ],
       "title": "Direct Buffer Memory",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 8,
+        "y": 39
+      },
+      "id": 51,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "(1 - (disk_free_bytes{application=\"$application\"} / disk_total_bytes{application=\"$application\"})) * 100",
+          "legendFormat": "Disk Usage",
+          "refId": "A"
+        }
+      ],
+      "title": "Disk Usage %",
+      "type": "stat"
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 39
+      },
+      "id": 50,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "jvm_gc_pause_seconds_max{application=\"$application\"}",
+          "legendFormat": "Max Pause Time",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_gc_overhead{application=\"$application\"}",
+          "legendFormat": "GC Overhead",
+          "refId": "B"
+        }
+      ],
+      "title": "GC Pauses",
       "type": "timeseries"
     },
     {
@@ -1296,8 +1376,8 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 16,
+        "w": 6,
+        "x": 18,
         "y": 39
       },
       "id": 33,
@@ -1534,7 +1614,7 @@
     ]
   },
   "timezone": "",
-  "title": "Snowflake URL Shortener Dashboard",
+  "title": "Snowflake URL Shorter Dashboard",
   "uid": "snowflake-shorter-dashboard",
   "version": 1
 }

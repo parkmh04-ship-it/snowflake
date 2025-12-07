@@ -11,7 +11,7 @@ kotlinxCoroutinesTest = "1.7.3"
 kaffeine = "3.1.8"
 mockk = "1.13.11"
 springBoot = "3.5.3"
-micrometer = "1.15.1"
+micrometer = "1.16.0"
 springdocOpenapi = "2.5.0"
 spotless = "6.25.0"
 springMockk = "4.0.2"
@@ -23,6 +23,7 @@ testcontainers = "1.19.3"
 # Additions for snowflake-core
 spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter", version.ref = "springBoot" }
 micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
+micrometer-java21 = { module = "io.micrometer:micrometer-java21", version.ref = "micrometer" }
 
 # QueryDSL and Jakarta Annotations for snowflake-app
 jakarta-annotation-api = { module = "jakarta.annotation:jakarta.annotation-api", version.ref = "jakartaAnnotationApi" }

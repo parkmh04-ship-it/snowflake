@@ -2,7 +2,7 @@ package io.dave.snowflake.adapter.inbound.router
 
 import io.dave.snowflake.adapter.inbound.dto.ShortenRequest
 import io.dave.snowflake.adapter.inbound.dto.ShortenResponse
-import io.dave.snowflake.adapter.inbound.handler.ShortenerHandler
+import io.dave.snowflake.adapter.inbound.handler.ShorterHandler
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.enums.ParameterIn
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.reactive.function.server.coRouter
 
 @Configuration
-class ShortenerRouter {
+class ShorterRouter {
 
     @Bean
     @RouterOperations(
@@ -27,7 +27,7 @@ class ShortenerRouter {
             RouterOperation(
                 path = "/shorten",
                 method = [RequestMethod.POST],
-                beanClass = ShortenerHandler::class,
+                beanClass = ShorterHandler::class,
                 beanMethod = "shorten",
                 operation = Operation(
                     operationId = "shortenUrl",
@@ -48,7 +48,7 @@ class ShortenerRouter {
             RouterOperation(
                 path = "/shorten/{shortUrl}",
                 method = [RequestMethod.GET],
-                beanClass = ShortenerHandler::class,
+                beanClass = ShorterHandler::class,
                 beanMethod = "redirect",
                 operation = Operation(
                     operationId = "redirectUrl",
@@ -72,7 +72,7 @@ class ShortenerRouter {
             RouterOperation(
                 path = "/ping",
                 method = [RequestMethod.GET],
-                beanClass = ShortenerHandler::class,
+                beanClass = ShorterHandler::class,
                 beanMethod = "ping",
                 operation = Operation(
                     operationId = "ping",
@@ -86,7 +86,7 @@ class ShortenerRouter {
             RouterOperation(
                 path = "/health",
                 method = [RequestMethod.GET],
-                beanClass = ShortenerHandler::class,
+                beanClass = ShorterHandler::class,
                 beanMethod = "health",
                 operation = Operation(
                     operationId = "health",
@@ -98,7 +98,7 @@ class ShortenerRouter {
             )
         ]
     )
-    fun shortenerRoutes(handler: ShortenerHandler) = coRouter {
+    fun shorterRoutes(handler: ShorterHandler) = coRouter {
         accept(MediaType.APPLICATION_JSON).nest {
             POST("/shorten", handler::shorten)
         }

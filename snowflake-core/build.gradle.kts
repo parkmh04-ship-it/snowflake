@@ -33,6 +33,7 @@ dependencies {
 
     // Micrometer Core API
     api(libs.micrometer.core) // Use catalog alias
+    api(libs.micrometer.java21) // Use catalog alias
 
     // Test Dependencies
     testApi(libs.spring.boot.starter.test) // Use catalog alias

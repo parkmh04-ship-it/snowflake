@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 @OpenAPIDefinition(
     info = Info(
-        title = "Snowflake URL Shortener API",
+        title = "Snowflake URL Shorter API",
         version = "1.0.0",
         description = "URL을 단축하고 관리하는 API"
     )

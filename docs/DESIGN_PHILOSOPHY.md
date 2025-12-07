@@ -3,7 +3,7 @@
 ## 🎯 핵심 가치 (Core Values)
 
 ### 1. 성능 최우선 (Performance First)
-Snowflake URL Shortener는 Global Scale의 트래픽을 처리해야 하므로, 모든 설계 단계에서 **Low Latency**와 **High Throughput**을 최우선으로 고려합니다.
+Snowflake URL Shorter는 Global Scale의 트래픽을 처리해야 하므로, 모든 설계 단계에서 **Low Latency**와 **High Throughput**을 최우선으로 고려합니다.
 *   **Kotlin Coroutines**: 경량 스레드를 통한 고효율 동시성 처리
 *   **Non-blocking I/O**: 리소스 효율 극대화
 

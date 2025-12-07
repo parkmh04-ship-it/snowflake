@@ -2,7 +2,7 @@
 
 ## 🎯 개요
 
-Snowflake URL Shortener는 **높은 신뢰성**과 **안정성**을 보장하기 위해 다층적인 테스트 전략을 채택하고 있습니다. 단위 테스트로 비즈니스 로직을 검증하고, 통합 테스트로 전체 시스템의 흐름을 검증합니다.
+Snowflake URL Shorter는 **높은 신뢰성**과 **안정성**을 보장하기 위해 다층적인 테스트 전략을 채택하고 있습니다. 단위 테스트로 비즈니스 로직을 검증하고, 통합 테스트로 전체 시스템의 흐름을 검증합니다.
 
 ---
 
@@ -52,7 +52,7 @@ connection.instanceFollowRedirects = false
 
 ## ✅ 주요 테스트 시나리오
 
-### URL 단축 (`UrlShortenerIntegrationTest`)
+### URL 단축 (`UrlShorterIntegrationTest`)
 1.  **단축 요청**: POST `/shorten` 요청 시 201 Created 응답 및 단축 URL 반환 확인
 2.  **리다이렉트**: 단축 URL 접속 시 302 Found 응답 및 원본 URL `Location` 헤더 확인
 3.  **캐시 동작**: 첫 조회 후 두 번째 조회 시 캐시 히트 확인 (응답 속도/로그)

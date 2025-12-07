@@ -3,7 +3,7 @@ skinparam classAttributeIconSize 0
 skinparam componentStyle uml2
 skinparam linetype ortho
 
-title Snowflake URL Shortener - Class Diagram (Hexagonal & DDD)
+title Snowflake URL Shorter - Class Diagram (Hexagonal & DDD)
 
 ' --- Domain Layer ---
 package "Domain" {
@@ -129,7 +129,7 @@ package "Application" {
 ' --- Adapter Layer ---
 package "Adapter" {
     package "Inbound (Web)" {
-        class ShortenerHandler <<Component>> {
+        class ShorterHandler <<Component>> {
             -shortenUrlUseCase: ShortenUrlUseCase
             -retrieveUrlUseCase: RetrieveUrlUseCase
             -baseUrl: String
@@ -229,8 +229,8 @@ ShortUrlCreatedEvent *-- ShortUrl
 ShortUrlCreatedEvent *-- LongUrl
 
 ' Adapter Layer depends on Application Layer (Use Cases) and Domain Layer (Ports)
-ShortenerHandler --> ShortenUrlUseCase : uses
-ShortenerHandler --> RetrieveUrlUseCase : uses
+ShorterHandler --> ShortenUrlUseCase : uses
+ShorterHandler --> RetrieveUrlUseCase : uses
 WorkerInfoHandler --> AssignedWorkerInfo : uses
 WorkerCleansingHandler --> WorkerCleansingUseCase : uses
 

@@ -11,7 +11,7 @@ import org.springframework.web.reactive.function.server.*
 import java.net.URI
 
 @Component
-class ShortenerHandler(
+class ShorterHandler(
     private val shortenUrlUseCase: ShortenUrlUseCase,
     private val retrieveUrlUseCase: RetrieveUrlUseCase,
     @param:Value($$"${app.base-url}") private val baseUrl: String,

@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: alpha, infra
+    active: alpha
     include:
       - common
       - database

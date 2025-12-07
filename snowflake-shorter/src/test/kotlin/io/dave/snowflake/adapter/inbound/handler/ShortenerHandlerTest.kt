@@ -3,7 +3,7 @@ package io.dave.snowflake.adapter.inbound.handler
 import com.ninjasquad.springmockk.MockkBean
 import io.dave.snowflake.adapter.inbound.dto.ShortenRequest
 import io.dave.snowflake.adapter.inbound.dto.ShortenResponse
-import io.dave.snowflake.adapter.inbound.router.ShortenerRouter
+import io.dave.snowflake.adapter.inbound.router.ShorterRouter
 import io.dave.snowflake.application.usecase.RetrieveUrlUseCase
 import io.dave.snowflake.application.usecase.ShortenUrlUseCase
 import io.dave.snowflake.domain.model.LongUrl
@@ -20,10 +20,10 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 
 @WebFluxTest
-@Import(ShortenerHandler::class, ShortenerRouter::class)
-@DisplayName("ShortenerHandler 테스트")
+@Import(ShorterHandler::class, ShorterRouter::class)
+@DisplayName("ShorterHandler 테스트")
 @TestPropertySource(properties = ["app.base-url=http://localhost:8080", "app.shorten-path-prefix=/shorten"])
-class ShortenerHandlerTest {
+class ShorterHandlerTest {
 
     @Autowired
     private lateinit var webTestClient: WebTestClient

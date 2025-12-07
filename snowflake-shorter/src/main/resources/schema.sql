@@ -1,8 +1,8 @@
--- 기존 shortener_history 테이블 삭제 (개발용)
-DROP TABLE IF EXISTS shortener_history;
+-- 기존 shorter_history 테이블 삭제 (개발용)
+DROP TABLE IF EXISTS shorter_history;
 
--- shortener_history 테이블 생성 (인덱스 포함)
-CREATE TABLE shortener_history (
+-- shorter_history 테이블 생성 (인덱스 포함)
+CREATE TABLE shorter_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     short_url VARCHAR(255) NOT NULL UNIQUE,
     long_url VARCHAR(4000) NOT NULL,

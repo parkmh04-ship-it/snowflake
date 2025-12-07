@@ -2,7 +2,7 @@
 
 ## 🗺️ 개요
 
-Snowflake URL Shortener는 **Hexagonal Architecture (Ports and Adapters)** 패턴을 기반으로 설계되었습니다. 비즈니스 로직을 외부 기술(Web, Database 등)로부터 격리하여 유지보수성과 테스트 용이성을 극대화하는 것을 목표로 합니다.
+Snowflake URL Shorter는 **Hexagonal Architecture (Ports and Adapters)** 패턴을 기반으로 설계되었습니다. 비즈니스 로직을 외부 기술(Web, Database 등)로부터 격리하여 유지보수성과 테스트 용이성을 극대화하는 것을 목표로 합니다.
 
 > 💡 **설계 철학**: 왜 이런 아키텍처를 선택했는지 궁금하다면 [DESIGN_PHILOSOPHY.md](DESIGN_PHILOSOPHY.md)를 참고하세요.
 

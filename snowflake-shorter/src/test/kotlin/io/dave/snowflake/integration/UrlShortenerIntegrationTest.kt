@@ -20,7 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired
  * 3. 단축 URL 조회 및 리다이렉트 (GET /shorten/{shortUrl})
  */
 @DisplayName("URL 단축 서비스 통합 테스트")
-class UrlShortenerIntegrationTest : IntegrationTestBase() {
+class UrlShorterIntegrationTest : IntegrationTestBase() {
 
         @Autowired
         private lateinit var webTestClient:
