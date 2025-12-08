@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Spring Boot 기본 설정 로드를 위한 SpringProperty -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+ㅎ
+    <!-- 콘솔 Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- Spring Boot 기본 콘솔 패턴 사용 -->
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 기본 로거 설정 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <!-- <appender-ref ref="FILE"/> -->
+        <!-- <appender-ref ref="JSON_CONSOLE"/> -->
+    </root>
+
+    <!-- 프로파일별 설정 예시 -->
+    <springProfile name="alpha, beta">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="perf">
+        <root level="OFF">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+        <!-- 특정 패키지는 로깅 OFF -->
+        <logger name="io.dave.snowflake.adapter.outbound.event" level="OFF"/>
+    </springProfile>
+
+</configuration>
