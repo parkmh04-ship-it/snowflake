@@ -4,7 +4,6 @@ import io.dave.snowflake.application.event.ShortUrlCreatedEvent
 import io.dave.snowflake.domain.component.ShortUrlGenerator
 import io.dave.snowflake.domain.model.LongUrl
 import io.dave.snowflake.domain.model.UrlMapping
-import io.dave.snowflake.domain.port.outbound.UrlPort
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Service
  */
 @Service
 class ShortenUrlUseCase(
-    private val urlPort: UrlPort, // 기존 조회 기능은 UrlPort 유지
     private val shortUrlGenerator: ShortUrlGenerator,
     private val eventPublisher: ApplicationEventPublisher // 이벤트 발행기 추가
 ) {
@@ -29,15 +27,15 @@ class ShortenUrlUseCase(
      */
     suspend fun shorten(longUrlStr: String): UrlMapping {
         val longUrl = LongUrl(longUrlStr)
-        
+
         // 1. 새로운 단축 URL 생성 (중복 검사 없이 바로 생성)
         val shortUrl = shortUrlGenerator.generate()
         val newMapping = UrlMapping(shortUrl, longUrl)
-        
+
         // 2. 이벤트 발행 (DB 적재는 이벤트 리스너가 비동기로 처리)
         // 이벤트 발행에 실패하면 예외가 발생하여 캐시 저장 및 반환 로직이 실행되지 않습니다.
         eventPublisher.publishEvent(ShortUrlCreatedEvent(newMapping.shortUrl, newMapping.longUrl, newMapping.createdAt))
-        
+
         // 4. 생성된 매핑 객체를 바로 반환 (응답 시간 최소화)
         return newMapping
     }

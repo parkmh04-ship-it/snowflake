@@ -3,6 +3,7 @@ package io.dave.snowflake.adapter.outbound.event
 import io.dave.snowflake.application.event.ShortUrlCreatedEvent
 import io.dave.snowflake.config.IOX
 import io.dave.snowflake.domain.model.FailedEvent
+import io.dave.snowflake.domain.model.UrlMapping
 import io.dave.snowflake.domain.port.outbound.DeadLetterQueuePort
 import io.dave.snowflake.domain.port.outbound.UrlPort
 import io.dave.snowflake.domain.util.RetryResult
@@ -161,9 +162,9 @@ class UrlPersistenceEventListener(
     }
 
     private fun ShortUrlCreatedEvent.toDomain() =
-            io.dave.snowflake.domain.model.UrlMapping(
-                    shortUrl = this.shortUrl,
-                    longUrl = this.longUrl,
-                    createdAt = this.createdAt
-            )
+        UrlMapping(
+            shortUrl = this.shortUrl,
+            longUrl = this.longUrl,
+            createdAt = this.createdAt
+        )
 }

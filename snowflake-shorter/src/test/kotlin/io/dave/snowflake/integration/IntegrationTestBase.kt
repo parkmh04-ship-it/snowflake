@@ -11,15 +11,20 @@ package io.dave.snowflake.integration
  * - MySQL 호환 모드: MODE=MySQL로 실제 환경과 유사한 동작
  * - 테스트용 ID 생성기: Worker 초기화 없이 간단한 순차 ID 사용
  */
+import io.dave.snowflake.adapter.outbound.persistence.entity.SnowflakeWorkersEntity
 import io.dave.snowflake.adapter.outbound.persistence.repository.FailedEventRepository
 import io.dave.snowflake.adapter.outbound.persistence.repository.ShortUrlRepository
 import io.dave.snowflake.adapter.outbound.persistence.repository.WorkerRepository
+import io.dave.snowflake.domain.model.Worker
+import io.dave.snowflake.domain.model.WorkerStatus
 import io.dave.snowflake.integration.config.TestSnowflakeConfig
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
+import java.time.LocalDateTime
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -27,16 +32,38 @@ import org.springframework.test.context.ActiveProfiles
 @org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 abstract class IntegrationTestBase {
 
-    @Autowired protected lateinit var shortUrlRepository: ShortUrlRepository
+    @Autowired
+    protected lateinit var shortUrlRepository: ShortUrlRepository
 
-    @Autowired protected lateinit var failedEventRepository: FailedEventRepository
+    @Autowired
+    protected lateinit var failedEventRepository: FailedEventRepository
 
-    @Autowired protected lateinit var workerRepository: WorkerRepository
+    @Autowired
+    protected lateinit var workerRepository: WorkerRepository
 
     @AfterEach
     fun cleanup() {
         shortUrlRepository.deleteAll()
         failedEventRepository.deleteAll()
         workerRepository.deleteAll()
+    }
+
+    @BeforeEach
+    fun init() {
+        workerRepository.saveAll(
+            (0..10).map {
+                with(it.toLong()) {
+                    SnowflakeWorkersEntity.fromDomain(
+                        Worker(
+                            workerNum = this,
+                            workerName = "NONE",
+                            status = WorkerStatus.IDLE,
+                            createdAt = LocalDateTime.now(),
+                            updatedAt = LocalDateTime.now()
+                        )
+                    )
+                }
+            }
+        )
     }
 }

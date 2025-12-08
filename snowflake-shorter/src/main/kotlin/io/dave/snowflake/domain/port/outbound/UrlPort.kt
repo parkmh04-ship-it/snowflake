@@ -1,6 +1,5 @@
 package io.dave.snowflake.domain.port.outbound
 
-import io.dave.snowflake.domain.model.LongUrl
 import io.dave.snowflake.domain.model.ShortUrl
 import io.dave.snowflake.domain.model.UrlMapping
 import kotlinx.coroutines.flow.Flow
@@ -18,8 +17,4 @@ interface UrlPort {
 
     /** 단축 URL이 이미 존재하는지 확인합니다. */
     suspend fun existsByShortUrl(shortUrl: ShortUrl): Boolean
-
-    /** 원본 URL로 매핑을 조회합니다. */
-    suspend fun findByLongUrl(longUrl: LongUrl): UrlMapping?
-
 }
