@@ -54,9 +54,9 @@ dependencies {
     // H2 Database for in-memory integration testing
     testImplementation(libs.h2)
     
-    // Testcontainers for integration testing (Docker 연결 이슈로 H2 사용)
-    // testImplementation(libs.testcontainers.mysql)
-    // testImplementation(libs.testcontainers.junit.jupiter)
+    // Testcontainers for integration testing
+    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.testcontainers.redis)
 }
 
 tasks.withType<Test> {

@@ -1,0 +1,34 @@
+spring:
+  data:
+    redis:
+      host: localhost # Testcontainers will override this dynamically
+      port: 6379 # Testcontainers will override this dynamically
+      password: # No password for local test Redis
+
+  # In-memory H2 database for integration tests
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    show-sql: true
+    open-in-view: false # Prevents the Open-in-View anti-pattern
+
+# Snowflake Properties for testing
+snowflake:
+  worker-id: 0 # Fixed worker ID for tests
+  data-center-id: 0 # Fixed data center ID for tests
+  initial-worker-count: 256 # For initial worker setup in tests
+
+# Logging configuration for tests
+logging:
+  level:
+    root: INFO
+    org.springframework.data.redis: DEBUG
+    io.dave.snowflake: INFO

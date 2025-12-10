@@ -18,6 +18,7 @@ springMockk = "4.0.2"
 jakartaAnnotationApi = "2.1.1"
 jakartaPersistenceApi = "3.1.0"
 testcontainers = "1.19.3"
+testcontainersRedis = "2.2.4"
 
 [libraries]
 # Additions for snowflake-core
@@ -59,6 +60,7 @@ micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-p
 # Testcontainers for integration testing
 testcontainers-mysql = { module = "org.testcontainers:mysql", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+testcontainers-redis = { module = "com.redis:testcontainers-redis", version.ref = "testcontainersRedis" }
 
 # H2 Database for in-memory integration testing
 h2 = { module = "com.h2database:h2", version = "2.2.224" }

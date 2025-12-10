@@ -30,7 +30,21 @@ import java.time.LocalDateTime
 @ActiveProfiles("test")
 @Import(TestSnowflakeConfig::class)
 @org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
+@Testcontainers // Testcontainers 활성화
 abstract class IntegrationTestBase {
+
+    companion object {
+        @Container // Redis 컨테이너 정의
+        val redisContainer: GenericContainer<*> = GenericContainer(DockerImageName.parse("redis:7.0.12-alpine"))
+            .withExposedPorts(6379)
+
+        @DynamicPropertySource
+        @JvmStatic
+        fun registerRedisProperties(registry: DynamicPropertyRegistry) {
+            registry.add("spring.data.redis.host") { redisContainer.host }
+            registry.add("spring.data.redis.port") { redisContainer.firstMappedPort.toString() }
+        }
+    }
 
     @Autowired
     protected lateinit var shortUrlRepository: ShortUrlRepository
