@@ -17,7 +17,7 @@ spotless = "6.25.0"
 springMockk = "4.0.2"
 jakartaAnnotationApi = "2.1.1"
 jakartaPersistenceApi = "3.1.0"
-testcontainers = "1.19.3"
+testcontainers = "1.20.4"
 testcontainersRedis = "2.2.4"
 
 [libraries]

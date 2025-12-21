@@ -34,13 +34,19 @@ spring:
     url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
 ```
 
-### 2. 기본 클래스: `IntegrationTestBase`
+### 2. 캐시 스토리지: Redis (Docker Isolated)
+통합 테스트 시 Redis는 **격리된 Docker 컨테이너** 환경에서 실행됩니다.
+*   **방식**: Gradle의 `test` 태스크가 실행될 때 자동으로 Redis 컨테이너를 시작(`doFirst`)하고, 테스트 종료 후 컨테이너를 제거(`doLast`)합니다.
+*   **이유**: `Testcontainers` 라이브러리와 일부 macOS 환경(Docker Desktop 설정 등) 간의 호환성 문제를 원천적으로 해결하고, 의존성을 최소화하여 안정적인 테스트 환경을 제공하기 위함입니다.
+*   **설정**: 컨테이너가 시작될 때 호스트의 임의 포트와 매핑되며, 이 포트 정보는 `spring.data.redis.port` 시스템 프로퍼티를 통해 Spring 테스트 컨텍스트에 자동 주입됩니다.
+
+### 3. 기본 클래스: `IntegrationTestBase`
 모든 통합 테스트는 이 클래스를 상속받아 공통 설정을 공유합니다.
 *   `@SpringBootTest(webEnvironment = RANDOM_PORT)`: 랜덤 포트에서 서버 실행
 *   `@ActiveProfiles("test")`: 테스트 프로파일 적용
 *   `@Transactional`: 테스트 종료 후 데이터 롤백 (필요 시)
 
-### 3. HTTP 클라이언트 설정
+### 4. HTTP 클라이언트 설정
 `TestRestTemplate` 사용 시 리다이렉트(302) 응답을 자동으로 따라가지 않도록 설정하여, 단축 URL 응답 자체를 검증할 수 있게 했습니다.
 
 ```kotlin

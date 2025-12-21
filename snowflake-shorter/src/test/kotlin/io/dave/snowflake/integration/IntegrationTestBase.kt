@@ -24,27 +24,19 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.testcontainers.containers.GenericContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.utility.DockerImageName
 import java.time.LocalDateTime
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import(TestSnowflakeConfig::class)
 @org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
-@Testcontainers // Testcontainers 활성화
 abstract class IntegrationTestBase {
-
-    companion object {
-        @Container // Redis 컨테이너 정의
-        val redisContainer: GenericContainer<*> = GenericContainer(DockerImageName.parse("redis:7.0.12-alpine"))
-            .withExposedPorts(6379)
-
-        @DynamicPropertySource
-        @JvmStatic
-        fun registerRedisProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.data.redis.host") { redisContainer.host }
-            registry.add("spring.data.redis.port") { redisContainer.firstMappedPort.toString() }
-        }
-    }
 
     @Autowired
     protected lateinit var shortUrlRepository: ShortUrlRepository
