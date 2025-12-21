@@ -15,11 +15,11 @@ Snowflake URL Shorter는 Twitter Snowflake 알고리즘과 Hexagonal Architectur
 ### 실행 방법
 
 ```bash
-# 1. DB 실행
+# 1. 인프라 실행 (MySQL, Redis, Metrics)
 docker-compose up -d
 
-# 2. 애플리케이션 실행
-./gradlew bootRun
+# 2. 애플리케이션 빌드 및 실행
+./gradlew :snowflake-shorter:bootRun
 ```
 
 ---
@@ -42,7 +42,7 @@ docker-compose up -d
 
 ---
 
-## �️ 보안 기능 (Security)
+## ️ 보안 기능 (Security)
 
 본 서비스는 안정적인 운영과 데이터 보호를 위해 다음과 같은 보안 계층을 갖추고 있습니다.
 
@@ -65,10 +65,10 @@ GRAFANA_ADMIN_PASSWORD=your_admin_password
 
 ---
 
-## �🛠️ 기술 스택
+## 🛠️ 기술 스택
 
-*   **Language**: Kotlin 1.9, Java 21 (Virtual Threads Enabled)
-*   **Framework**: Spring Boot 3.2 (WebFlux)
-*   **Database**: MySQL 8.0 (Prod & Test)
-*   **Concurrency**: Kotlin Coroutines
-*   **Build**: Gradle (Kotlin DSL)
+*   **Language**: Kotlin 2.1, Java 21 (Virtual Threads Enabled)
+*   **Framework**: Spring Boot 3.5.3 (WebFlux)
+*   **Database**: MySQL 8.0, Redis (Reactive)
+*   **Concurrency**: Kotlin Coroutines (Structured Concurrency)
+*   **Build**: Gradle Kotlin DSL (Multi-Module)

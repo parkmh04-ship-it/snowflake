@@ -1,225 +1,87 @@
 @startuml
 autonumber
 
-title Snowflake URL Shorter Sequences (Hexagonal & DDD)
+title Snowflake URL Shorter Sequences (Rate Limiting & Correlation)
 
 actor Client
-participant "Scheduler" as Scheduler
+participant "RateLimitFilter\n(Filter)" as Filter
+participant "RedisRateLimiter\n(Adapter)" as RedisLimiter
+participant "ShorterHandler\n(Handler)" as Handler
+participant "ShortenUrlUseCase\n(UseCase)" as UseCase
+participant "ShortUrlGenerator\n(Domain Service)" as Generator
+participant "UrlPort\n(Port)" as UrlPort
+participant "UrlPersistenceAdapter\n(Adapter)" as UrlAdapter
+database "Redis" as Redis
+database "MySQL" as DB
 
-box "Adapter (Inbound) - WebFlux" #LightBlue
-    participant "ShorterHandler" as Handler
-end box
+== Scenario 1: Shorten URL with Rate Limiting ==
 
-box "Application Layer - Usecase" #LightYellow
-    participant "ShortenUrlUseCase" as ShortenUseCase
-    participant "RetrieveUrlUseCase" as RetrieveUseCase
-    participant "WorkerCleansingUseCase" as CleansingUseCase
-    participant "WorkerHeartbeatUseCase" as HeartbeatUseCase
-end box
+Client -> Filter: POST /shorten
+activate Filter
 
-box "Domain Layer - Core Logic" #LightGreen
-    participant "ShortUrlGenerator" as Generator
-    participant "PooledIdGenerator" as IdGen
-    participant "Base62Encoder" as Encoder
-    participant "SnowflakeIdGenerator" as SnowflakeIdGen
-end box
+    Filter -> RedisLimiter: isAllowed(IP)
+    activate RedisLimiter
+        RedisLimiter -> Redis: EVAL "ratelimit.lua"
+        activate Redis
+        Redis --> RedisLimiter: Allowed (true)
+        deactivate Redis
+    RedisLimiter --> Filter: true
+    deactivate RedisLimiter
 
-box "Ports (Hexagonal - Outbound)" #Orange
-    participant "UrlPort" as UrlPort
-    participant "WorkerPort" as WorkerPort
-end box
+    Filter -> Handler: handleRequest
+    activate Handler
 
-box "Adapter (Outbound) - Persistence" #LightPink
-    participant "UrlPersistenceAdapter" as UrlAdapter
-    participant "WorkerPersistenceAdapter" as WorkerAdapter
-end box
+        Handler -> UseCase: shorten(longUrl)
+        activate UseCase
 
-database "MySQL (JDBC/JPA)" as DB
+            UseCase -> UrlPort: findByLongUrl(longUrl)
+            activate UrlPort
+                UrlPort -> UrlAdapter: findByLongUrl
+                activate UrlAdapter
+                    UrlAdapter -> DB: SELECT ...
+                    activate DB
+                    DB --> UrlAdapter: null
+                    deactivate DB
+                UrlAdapter --> UrlPort: null
+                deactivate UrlAdapter
+            UrlPort --> UseCase: null
+            deactivate UrlPort
 
-== Scenario 1: Shorten URL ==
+            UseCase -> Generator: generate()
+            activate Generator
+                Generator -> Generator: Generate Snowflake ID\n(Base62 Encode)
+                Generator -> UrlPort: existsByShortUrl
+                activate UrlPort
+                    UrlPort -> UrlAdapter: exists
+                    UrlAdapter -> DB: EXISTS
+                UrlPort --> Generator: false
+                deactivate UrlPort
+            Generator --> UseCase: ShortUrl
+            deactivate Generator
 
-Client -> Handler: POST /shorten { "url": "..." }
-activate Handler
-note right of Handler: [Inbound Adapter]\nHandles incoming web requests.
+            UseCase -> UrlPort: save(mapping)
+            activate UrlPort
+                UrlPort -> UrlAdapter: save
+                activate UrlAdapter
+                    UrlAdapter -> DB: INSERT (Async/Batch)
+                UrlAdapter --> UrlPort: Mapping
+                deactivate UrlAdapter
+            UrlPort --> UseCase: Mapping
+            deactivate UrlPort
 
-Handler -> ShortenUseCase: shorten(longUrl)
-activate ShortenUseCase
-note right of ShortenUseCase: [Application Service]\nOrchestrates domain logic, manages transactions.
+            ' Redis Caching Refactored with Coroutines
+            UseCase -> Redis: SET "short:{id}" (awaitSingleOrNull)
+            activate Redis
+            Redis --> UseCase: OK
+            deactivate Redis
 
-' Use Case interacts with the Port, not directly with the adapter implementation.
-ShortenUseCase -> UrlPort: findByLongUrl(longUrl)
-activate UrlPort
-' Port delegates to its implementing Adapter.
-UrlPort -> UrlAdapter: findByLongUrl(longUrl)
-activate UrlAdapter
-UrlAdapter -> DB: SELECT * FROM urls WHERE long_url = ?
-activate DB
-DB --> UrlAdapter: (null or existing mapping)
-deactivate DB
-UrlAdapter --> UrlPort: (null or existing mapping)
-deactivate UrlAdapter
-UrlPort --> ShortenUseCase: (null or existing mapping)
-deactivate UrlPort
+        UseCase --> Handler: Result
+        deactivate UseCase
 
-alt New URL
-    ShortenUseCase -> Generator: generate()
-    activate Generator
-    note right of Generator: [Domain Service]\nGenerates a unique short URL.
-    Generator -> IdGen: nextId()
-    activate IdGen
-    IdGen -> SnowflakeIdGen: nextId()
-    activate SnowflakeIdGen
-    SnowflakeIdGen --> IdGen: Snowflake ID
-    deactivate SnowflakeIdGen
-    IdGen --> Generator: Snowflake ID
-    deactivate IdGen
-    Generator -> Encoder: encode(ID)
-    activate Encoder
-    Encoder --> Generator: Short String Key
-    deactivate Encoder
-    ' Check for short URL existence via Port
-    Generator -> UrlPort: existsByShortUrl(shortKey)
-    activate UrlPort
-    UrlPort -> UrlAdapter: existsByShortUrl(shortKey)
-    activate UrlAdapter
-    UrlAdapter -> DB: EXISTS(...)
-    activate DB
-    DB --> UrlAdapter: false
-    deactivate DB
-    UrlAdapter --> UrlPort: false
-    deactivate UrlAdapter
-    UrlPort --> Generator: false
-    deactivate UrlPort
-    Generator --> ShortenUseCase: Generated Short URL
-    deactivate Generator
+    Handler --> Filter: 201 Created
+    deactivate Handler
 
-    note right of ShortenUseCase: Creates domain object (UrlMapping) and saves it via Port.
-    ShortenUseCase -> UrlPort: save(urlMapping)
-    activate UrlPort
-    UrlPort -> UrlAdapter: save(urlMapping)
-    activate UrlAdapter
-    UrlAdapter -> DB: INSERT INTO urls ...
-    activate DB
-    DB --> UrlAdapter: Success
-    deactivate DB
-    UrlAdapter --> UrlPort: Saved UrlMapping
-    deactivate UrlAdapter
-    UrlPort --> ShortenUseCase: Saved UrlMapping
-    deactivate UrlPort
-else Existing URL
-    ' ShortenUseCase already received existing mapping from UrlPort
-end
-
-ShortenUseCase --> Handler: UrlMapping result
-deactivate ShortenUseCase
-
-Handler --> Client: 201 Created { "shortUrl": "..." }
-deactivate Handler
-
-== Scenario 2: Retrieve URL and Redirect ==
-
-Client -> Handler: GET /{shortKey}
-activate Handler
-note right of Handler: [Inbound Adapter]\nHandles short URL lookup.
-
-Handler -> RetrieveUseCase: retrieve(shortKey)
-activate RetrieveUseCase
-note right of RetrieveUseCase: [Application Service]\nRetrieves original URL.
-
-RetrieveUseCase -> UrlPort: findByShortUrl(shortKey)
-activate UrlPort
-UrlPort -> UrlAdapter: findByShortUrl(shortKey)
-activate UrlAdapter
-UrlAdapter -> DB: SELECT * FROM urls WHERE short_url = ?
-activate DB
-DB --> UrlAdapter: Row data
-deactivate DB
-UrlAdapter --> UrlPort: UrlMapping? (Nullable)
-deactivate UrlAdapter
-UrlPort --> RetrieveUseCase: UrlMapping? (Nullable)
-deactivate UrlPort
-
-RetrieveUseCase --> Handler: UrlMapping?
-deactivate RetrieveUseCase
-
-alt URL Found
-    note right of Handler: [Inbound Adapter]\nResponds with 302 Redirect.
-    Handler --> Client: 302 Found (Location: "originalUrl")
-else Not Found
-    note right of Handler: [Inbound Adapter]\nResponds with 404 Not Found.
-    Handler --> Client: 404 Not Found
-end
-deactivate Handler
-
-
-== Scenario 3: Cleanse Idle Workers ==
-
-note over Scheduler, CleansingUseCase: Scheduled task to clean up idle workers.
-Scheduler -> CleansingUseCase: cleanseIdleWorkers()
-activate CleansingUseCase
-note right of CleansingUseCase: [Application Service]\nFinds workers inactive for > 5 minutes.
-
-CleansingUseCase -> WorkerPort: findInactiveWorkers(threshold)
-activate WorkerPort
-WorkerPort -> WorkerAdapter: findInactiveWorkers(threshold)
-activate WorkerAdapter
-WorkerAdapter -> DB: SELECT * FROM snowflake_workers WHERE status = 'ACTIVE' AND updated_at < :threshold
-activate DB
-DB --> WorkerAdapter: Flow<WorkerEntity>
-deactivate DB
-WorkerAdapter --> WorkerPort: Flow<Worker>
-deactivate WorkerAdapter
-WorkerPort --> CleansingUseCase: Flow<Worker>
-deactivate WorkerPort
-
-alt Idle Workers Found
-    note right of CleansingUseCase: [Application Service]\nUpdates status of found workers via Port.
-    CleansingUseCase -> WorkerPort: cleanseWorkers(workerIds, newStatus)
-    activate WorkerPort
-    WorkerPort -> WorkerAdapter: cleanseWorkers(workerIds, newStatus)
-    activate WorkerAdapter
-    WorkerAdapter -> DB: UPDATE snowflake_workers SET ... WHERE worker_id IN (...)
-    activate DB
-    DB --> WorkerAdapter: Update count
-    deactivate DB
-    WorkerAdapter --> WorkerPort: Update count
-    deactivate WorkerAdapter
-    WorkerPort --> CleansingUseCase: Updated count
-    deactivate WorkerPort
-else No Idle Workers
-    note right of CleansingUseCase: No workers to clean up.
-end
-CleansingUseCase --> Scheduler: Result (e.g., updated count)
-deactivate CleansingUseCase
-
-
-== Scenario 4: Worker Heartbeat ==
-
-Client -> Handler: POST /worker/heartbeat/{workerId} (or similar endpoint)
-activate Handler
-note right of Handler: [Inbound Adapter]\nReceives heartbeat signal from a worker.
-
-Handler -> HeartbeatUseCase: recordHeartbeat(workerId)
-activate HeartbeatUseCase
-note right of HeartbeatUseCase: [Application Service]\nUpdates worker's last seen timestamp.
-
-HeartbeatUseCase -> WorkerPort: updateWorkerLastSeen(workerId, now())
-activate WorkerPort
-WorkerPort -> WorkerAdapter: updateWorkerLastSeen(workerId, now())
-activate WorkerAdapter
-WorkerAdapter -> DB: UPDATE snowflake_workers SET updated_at = NOW() WHERE worker_id = ?
-activate DB
-DB --> WorkerAdapter: Success
-deactivate DB
-WorkerAdapter --> WorkerPort: Success
-deactivate WorkerPort
-WorkerPort --> HeartbeatUseCase: Success
-deactivate WorkerPort
-
-HeartbeatUseCase --> Handler: Success response
-deactivate HeartbeatUseCase
-
-Handler --> Client: 200 OK
-deactivate Handler
+Filter --> Client: 201 Created
+deactivate Filter
 
 @enduml

@@ -4,32 +4,23 @@ import io.dave.snowflake.domain.generator.Base62Encoder
 import io.dave.snowflake.domain.generator.PooledIdGenerator
 import io.dave.snowflake.domain.model.ShortUrl
 import io.dave.snowflake.domain.port.outbound.UrlPort
-import io.micrometer.core.annotation.Timed // @Timed import 추가
-import org.springframework.stereotype.Service
 import kotlin.random.Random
 
-/**
- * 고유하고 짧은 URL을 생성하는 도메인 서비스.
- * 생성된 ID를 Base62로 인코딩하며, 중복을 방지하기 위해 URL 저장소에 존재 여부를 확인합니다.
- */
-@Service
+/** 고유하고 짧은 URL을 생성하는 도메인 서비스. 생성된 ID를 Base62로 인코딩하며, 중복을 방지하기 위해 URL 저장소에 존재 여부를 확인합니다. */
 class ShortUrlGenerator(
-    private val idGenerator: PooledIdGenerator,
-    private val urlPort: UrlPort,
-    // MeterRegistry 주입 제거
-    private val random: Random = Random(System.currentTimeMillis())
+        private val idGenerator: PooledIdGenerator,
+        private val urlPort: UrlPort,
+        private val random: Random = Random(System.currentTimeMillis())
 ) {
     private val alphabet = Base62Encoder.ALPHABET
     private val alphabetSize = alphabet.length
 
     /**
-     * 고유한 ShortUrl을 생성하여 반환합니다.
-     * 생성된 Snowflake ID를 Base62로 인코딩한 후, 해당 ShortUrl이 이미 존재하는지 확인합니다.
-     * 중복될 경우, 뒤에 임의의 알파벳을 추가하여 충돌을 회피합니다.
+     * 고유한 ShortUrl을 생성하여 반환합니다. 생성된 Snowflake ID를 Base62로 인코딩한 후, 해당 ShortUrl이 이미 존재하는지 확인합니다. 중복될
+     * 경우, 뒤에 임의의 알파벳을 추가하여 충돌을 회피합니다.
      *
      * @return 고유하게 생성된 ShortUrl 객체.
      */
-    @Timed("snowflake.id.generation.time.seconds", description = "Time taken to generate a Snowflake ID") // @Timed 어노테이션 추가
     suspend fun generate(): ShortUrl {
         var shortUrlString: String
         var isUnique = false

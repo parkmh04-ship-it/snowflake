@@ -31,38 +31,55 @@ graph TD
     UseCase --> Model
 ```
 
-### 1. Domain Layer (Core)
-비즈니스 로직의 핵심입니다. 프레임워크나 라이브러리에 의존하지 않는 순수한 Kotlin 코드로 작성됩니다.
-*   **Model**: `ShortUrl`, `FailedEvent` 등 핵심 비즈니스 객체
-*   **Port**: 외부와 통신하기 위한 인터페이스 정의
+### 물리적 모듈 구조 (Multi-Module)
 
-### 2. Application Layer (Orchestration)
-도메인 객체를 사용하여 비즈니스 유스케이스를 흐름대로 제어합니다.
-*   **UseCase**: 트랜잭션 관리 및 비즈니스 흐름 조정
+시스템은 계층 간 결합도를 물리적으로 제어하기 위해 3개의 모듈로 분리되어 있습니다.
 
-### 3. Adapter Layer (Infrastructure)
-애플리케이션과 외부 세계를 연결합니다.
-*   **Inbound**: HTTP 요청 처리 (WebFlux Handlers)
-*   **Outbound**: DB 접근 (JPA Repositories), 외부 시스템 통신
+1.  **`snowflake-core`**: 
+    *   Snowflake ID 생성 알고리즘을 담은 순수 Kotlin 라이브러리.
+    *   Spring 등 모든 인프라 의존성 배제.
+2.  **`snowflake-shorter-domain`**: 
+    *   URL 단축 서비스의 핵심 비즈니스 로직 및 모델.
+    *   외부 데이터 규격(JPA)이나 프레임워크(Spring) 어노테이션이 없는 **Pure Domain Layer**.
+    *   외부 세상을 향한 인터페이스(**Ports**) 정의.
+3.  **`snowflake-shorter`**: 
+    *   실행 가능한 애플리케이션 및 인프라 구현체(**Adapters**).
+    *   WebFlux, JPA, Redis 등 구체적인 기술 스택 포함.
+    *   도메인 로직을 감싸는 Application Layer(UseCase) 및 설정 포함.
+
+### 의존성 규칙 (Dependency Rules)
+
+```mermaid
+graph BT
+    Shorter[snowflake-shorter] --> Domain[snowflake-shorter-domain]
+    Shorter --> Core[snowflake-core]
+    Domain --> Core
+```
+*   **핵심 원칙**: 안쪽(Domain)은 바깥쪽(Adapter)을 전혀 알지 못합니다. 
+*   **DIP(의존성 역전 원칙)**: 인프라 기술(Redis)은 도메인이 정의한 추상 인터페이스(`RateLimiter` 포트 등)를 구현함으로써 도메인에 플러그인됩니다.
 
 ---
 
 ## 🔄 데이터 흐름 (Data Flow)
 
-### 단축 URL 생성 흐름
+### 단축 URL 생성 흐름 (6-Step Flow)
 
-1.  **Request**: 클라이언트가 `POST /shorten` 요청
-2.  **Web Adapter**: 요청을 받아 `ShortenUrlUseCase` 호출
-3.  **Application**:
-    *   [Snowflake ID 생성](features/ID_GENERATION.md)
-    *   [Base62 인코딩](features/URL_SHORTENING.md)
-    *   `ShortUrlCreatedEvent` 발행 (비동기 처리)
-4.  **Response**: 즉시 단축 URL 응답 (Low Latency)
-5.  **Persistence**:
-    *   이벤트 리스너가 이벤트를 버퍼링하여 배치 저장
-    *   실패 시 [Dead Letter Queue](features/DLQ.md)로 이동
+1.  **Rate Limiting**: `RateLimitFilter`에서 클라이언트 IP를 식별하고 Redis Lua 스크립트를 통해 허용 여부를 즉시 확인합니다.
+2.  **Request Handling**: `Web Adapter`가 요청을 검증하고 `ShortenUrlUseCase`를 호출합니다.
+3.  **ID Generation & Encoding**: 
+    *   도메인 서비스인 `ShortUrlGenerator`가 Snowflake ID를 생성합니다.
+    *   Base62 인코딩을 통해 짧은 문자열 키를 생성합니다.
+4.  **Collision Check**: 생성된 키가 데이터 저장소에 이미 존재하는지 포트를 통해 확인합니다. (중복 시 재시도)
+5.  **Caching & Persistence**:
+    *   **Redis Cache**: 생성된 매핑 정보를 Redis에 Coroutines 스타일로 즉시 기록합니다.
+    *   **Event Publishing**: DB 저장을 위해 `ShortUrlCreatedEvent`를 발행합니다. (비동기 처리)
+6.  **Response**: 저장 완료 여부와 관계없이 생성된 단축 URL을 클라이언트에게 즉시 응답(201 Created)하여 최저 지연 시간을 보장합니다.
 
----
+### 조회 및 리다이렉트 흐름
+
+1.  **Cache First**: Redis에서 `short:{key}`로 데이터를 조회합니다.
+2.  **DB Fallback**: 캐시 미스 시 MySQL에서 조회하고, 결과를 다시 Redis에 적재합니다. (Read-Through)
+3.  **Redirect**: 원본 URL로 `302 Found` 응답을 전송합니다.
 
 ## 📊 관측성 (Observability)
 

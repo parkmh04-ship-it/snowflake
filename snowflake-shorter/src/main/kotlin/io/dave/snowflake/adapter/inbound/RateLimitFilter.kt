@@ -1,6 +1,6 @@
 package io.dave.snowflake.adapter.inbound
 
-import io.dave.snowflake.domain.util.RedisRateLimiter
+import io.dave.snowflake.domain.port.RateLimiter
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.reactor.mono
 import org.springframework.core.annotation.Order
@@ -14,7 +14,7 @@ private val logger = KotlinLogging.logger {}
 
 /** IP 기반 요청 처리율 제한(Rate Limiting) 필터. */
 @Order(1) // ExceptionHandler(Order -1) 뒤, 실제 라우터 이전에 실행
-class RateLimitFilter(private val redisRateLimiter: RedisRateLimiter) : WebFilter {
+class RateLimitFilter(private val rateLimiter: RateLimiter) : WebFilter {
 
     companion object {
         private const val LIMIT = 100 // 예: IP당 1분간 100회 요청
@@ -27,7 +27,7 @@ class RateLimitFilter(private val redisRateLimiter: RedisRateLimiter) : WebFilte
 
         // /shorten 엔드포인트에 대해 우선적으로 제안
         if (path.startsWith("/shorten")) {
-            return mono { redisRateLimiter.isAllowed(clientIp, LIMIT, WINDOW_SECONDS) }.flatMap {
+            return mono { rateLimiter.isAllowed(clientIp, LIMIT, WINDOW_SECONDS) }.flatMap {
                     isAllowed ->
                 if (!isAllowed) {
                     logger.warn { "[RateLimit] Request rejected for IP: $clientIp" }

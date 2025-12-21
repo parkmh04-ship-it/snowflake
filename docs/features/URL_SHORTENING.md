@@ -8,37 +8,30 @@
 ## 🔄 단축 프로세스 (Shortening Process)
 
 ```mermaid
-graph LR
-    User -->|POST /shorten| Controller
+graph TD
+    User -->|1. POST /shorten| Filter[Rate Limit Filter]
+    Filter -->|2. Check| RedisLimiter[(Redis Limiter)]
+    Filter -->|3. Call| Controller[Shorter Handler]
     Controller --> UseCase[ShortenUrlUseCase]
-    UseCase -->|1. Generate ID| Snowflake[Snowflake Generator]
-    Snowflake -->|Long ID| UseCase
-    UseCase -->|2. Encode| Base62[Base62 Encoder]
-    Base62 -->|Short String| UseCase
-    UseCase -->|3. Publish Event| Event[Event Publisher]
-    UseCase -->|4. Return| User
-    Event -.->|Async Save| DB[(Database)]
+    UseCase -->|4. Generate| Generator[ShortUrlGenerator]
+    Generator -->|Snowflake ID| UseCase
+    UseCase -->|5. Save Cache| RedisCache[(Redis Cache)]
+    UseCase -->|6. Publish| Event[Event Publisher]
+    UseCase -->|7. Return 201| User
+    Event -.->|Async Batch Save| DB[(MySQL DB)]
 ```
 
-### 1. ID 생성 (ID Generation)
-먼저 [Snowflake 알고리즘](ID_GENERATION.md)을 통해 전역적으로 유일한 64비트 Long ID를 생성합니다.
-*   예: `173849201849201`
+### 1. 처리율 제한 (Rate Limiting)
+서비스 안정성을 위해 `RateLimitFilter`가 모든 `/shorten` 요청을 선제적으로 차단하거나 허용합니다. Redis Lua 스크립트를 사용하여 원자적(Atomic)으로 카운트를 관리합니다.
 
-### 2. Base62 인코딩 (Base62 Encoding)
-생성된 Long ID를 **Base62** 문자열로 변환합니다. Base64와 달리 URL에 안전하지 않은 문자(`+`, `/`, `=`)를 제외한 `[a-zA-Z0-9]` 62개 문자만 사용합니다.
+### 2. 고유 키 생성 (ID Generation & Encoding)
+1.  [Snowflake 알고리즘](ID_GENERATION.md)으로 64비트 유일 정수를 생성합니다.
+2.  **Base62** 인코딩을 통해 `http://sh.rt/aB34X`와 같은 짧은 키로 변환합니다.
+3.  도메인 서비스(`ShortUrlGenerator`) 내에서 저장소에 키가 존재하는지 확인(Collision Check)하여 충돌을 방지합니다.
 
-#### 특징 (`Base62Encoder.kt`)
-*   **Shuffled Alphabet**: 보안성을 높이고 예측 가능성을 낮추기 위해, 표준 순서(`0-9a-zA-Z`)가 아닌 **무작위로 섞은 알파벳 셋**을 사용합니다.
-    *   Alphabet: `wFjR2pTqYx4Ua7sKv9dHnC0mZl1bGeOi3u6I8E5rBAcWJdXPQfyMLzNtVkGS`
-*   **짧은 길이**: 64비트 정수를 인코딩하면 최대 11자 이내의 짧은 문자열이 생성됩니다.
-
-### 3. 비동기 저장 (Write-Behind)
-사용자 응답 지연(Latency)을 최소화하기 위해 **Event Sourcing** 패턴과 유사한 방식을 사용합니다.
-
-1.  단축 URL 생성 즉시 `ShortUrlCreatedEvent`를 발행합니다.
-2.  사용자에게는 DB 저장 결과를 기다리지 않고 **즉시 응답(201 Created)**을 반환합니다.
-3.  별도의 이벤트 리스너가 이벤트를 구독하여 DB에 비동기로 저장합니다.
-4.  저장 실패 시 [Dead Letter Queue (DLQ)](DLQ.md)로 이동하여 재처리를 보장합니다.
+### 3. 이중 저장 전략 (Multi-Layer Persistence)
+1.  **Write-Through (Cache)**: 생성된 정보는 Redis에 **즉시** 저장(`awaitSingleOrNull`)되어, 이어지는 첫 번째 조회부터 즉각적인 성능을 보장합니다.
+2.  **Write-Behind (Database)**: 실제 영구 저장은 이벤트를 통해 비동기로 처리됩니다. 이벤트 리스너가 버퍼링 후 배치(Batch)로 MySQL에 저장하며, 실패 시 [DLQ](DLQ.md)로 이관됩니다.
 
 ---
 

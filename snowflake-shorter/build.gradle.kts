@@ -16,7 +16,8 @@ java {
 }
 
 dependencies {
-    // Core Module Dependency
+    // Domain & Core Module Dependency
+    implementation(project(":snowflake-shorter-domain"))
     implementation(project(":snowflake-core"))
 
     // Spring Boot Dependencies - Core needs

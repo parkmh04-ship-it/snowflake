@@ -12,4 +12,5 @@ plugins {
 rootProject.name = "snowflake"
 
 include("snowflake-shorter")
+include("snowflake-shorter-domain")
 include("snowflake-core")
