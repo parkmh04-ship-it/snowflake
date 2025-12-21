@@ -17,42 +17,34 @@ Snowflake URL Shorter는 **높은 신뢰성**과 **안정성**을 보장하기 �
 ### 2. 통합 테스트 (Integration Tests)
 *   **목적**: 컴포넌트 간의 상호작용 및 전체 흐름 검증
 *   **범위**: Controller -> Service -> Repository -> DB
-*   **도구**: Spring Boot Test, H2 Database (MySQL Mode), TestRestTemplate
-*   **특징**: 실제 스프링 컨텍스트를 로드하여 실제 환경과 유사하게 테스트
+*   **도구**: Spring Boot Test, MySQL 8.0 (Docker), Redis (Docker), WebTestClient
+*   **특징**: 실제 스프링 컨텍스트와 실제 데이터베이스를 사용하여 운영 환경과 동일한 조건에서 테스트
 
 ---
 
 ## 🛠️ 통합 테스트 환경 구성
 
-### 1. 데이터베이스: H2 (MySQL Mode)
-Docker 컨테이너 없이 빠른 실행을 위해 H2 인메모리 데이터베이스를 사용하되, `MODE=MySQL` 옵션으로 실제 운영 환경과의 호환성을 유지합니다.
+### 1. 인프라스트럭처: MySQL & Redis (Docker Direct Control)
+통합 테스트의 신뢰성을 높이기 위해 H2나 Embedded Redis 대신 **실제 MySQL 8.0과 Redis Docker 컨테이너**를 사용합니다.
 
-```yaml
-# application-test.yml
-spring:
-  datasource:
-    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
-```
+*   **방식**: `IntegrationTestBase` 클래스에서 `ProcessBuilder`를 사용하여 Docker 컨테이너를 직접 실행하고 관리합니다.
+*   **이유**: `Testcontainers` 라이브러리의 의존성을 제거하고, 환경 변수나 Docker 소켓 설정 문제 없이 확실하게 컨테이너를 제어하기 위함입니다.
+*   **동작 방식**:
+    1.  테스트 시작 시 (`init` 블록): `docker run` 명령어로 MySQL과 Redis 컨테이너 실행.
+    2.  포트 매핑: 동적으로 할당된 호스트 포트를 파싱하여 Spring Boot 설정(`spring.datasource.url` 등)에 주입.
+    3.  Health Check: `mysql -e "SELECT 1"` 등의 명령어로 서비스가 완전히 준비될 때까지 대기.
+    4.  테스트 종료 시 (`ShutdownHook`): `docker rm -f` 명령어로 컨테이너 강제 삭제.
 
-### 2. 캐시 스토리지: Redis (Docker Isolated)
-통합 테스트 시 Redis는 **격리된 Docker 컨테이너** 환경에서 실행됩니다.
-*   **방식**: Gradle의 `test` 태스크가 실행될 때 자동으로 Redis 컨테이너를 시작(`doFirst`)하고, 테스트 종료 후 컨테이너를 제거(`doLast`)합니다.
-*   **이유**: `Testcontainers` 라이브러리와 일부 macOS 환경(Docker Desktop 설정 등) 간의 호환성 문제를 원천적으로 해결하고, 의존성을 최소화하여 안정적인 테스트 환경을 제공하기 위함입니다.
-*   **설정**: 컨테이너가 시작될 때 호스트의 임의 포트와 매핑되며, 이 포트 정보는 `spring.data.redis.port` 시스템 프로퍼티를 통해 Spring 테스트 컨텍스트에 자동 주입됩니다.
-
-### 3. 기본 클래스: `IntegrationTestBase`
+### 2. 기본 클래스: `IntegrationTestBase`
 모든 통합 테스트는 이 클래스를 상속받아 공통 설정을 공유합니다.
 *   `@SpringBootTest(webEnvironment = RANDOM_PORT)`: 랜덤 포트에서 서버 실행
 *   `@ActiveProfiles("test")`: 테스트 프로파일 적용
-*   `@Transactional`: 테스트 종료 후 데이터 롤백 (필요 시)
+*   `@Import(TestSnowflakeConfig::class)`: 테스트 전용 설정 로드
 
-### 4. HTTP 클라이언트 설정
-`TestRestTemplate` 사용 시 리다이렉트(302) 응답을 자동으로 따라가지 않도록 설정하여, 단축 URL 응답 자체를 검증할 수 있게 했습니다.
-
-```kotlin
-// 리다이렉트 비활성화
-connection.instanceFollowRedirects = false
-```
+### 3. HTTP 클라이언트: `WebTestClient`
+Spring WebFlux의 비동기 논블로킹 특성을 테스트하기 위해 `WebTestClient`를 사용합니다.
+*   API 엔드포인트 호출 및 응답 검증 (Status Code, Body, Header)
+*   비동기 처리 흐름 검증
 
 ---
 
@@ -61,8 +53,8 @@ connection.instanceFollowRedirects = false
 ### URL 단축 (`UrlShorterIntegrationTest`)
 1.  **단축 요청**: POST `/shorten` 요청 시 201 Created 응답 및 단축 URL 반환 확인
 2.  **리다이렉트**: 단축 URL 접속 시 302 Found 응답 및 원본 URL `Location` 헤더 확인
-3.  **캐시 동작**: 첫 조회 후 두 번째 조회 시 캐시 히트 확인 (응답 속도/로그)
-4.  **예외 처리**: 잘못된 URL 형식 요청 시 400 Bad Request 확인
+3.  **캐시 동작**: 첫 조회 후 두 번째 조회 시 캐시 히트 확인 (Redis 연동 검증)
+4.  **중복 정책**: 동일 URL 요청 시 매번 새로운 단축 URL 생성 확인 (No-Check Strategy)
 
 ### Dead Letter Queue (`DeadLetterQueueIntegrationTest`)
 1.  **저장**: DB 저장 실패 시 `failed_events` 테이블에 저장 확인

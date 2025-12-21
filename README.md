@@ -46,6 +46,6 @@ docker-compose up -d
 
 *   **Language**: Kotlin 1.9
 *   **Framework**: Spring Boot 3.2 (WebFlux)
-*   **Database**: MySQL 8.0, H2 (Test)
+*   **Database**: MySQL 8.0 (Prod & Test)
 *   **Concurrency**: Kotlin Coroutines
 *   **Build**: Gradle (Kotlin DSL)
