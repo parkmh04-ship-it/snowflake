@@ -1,13 +1,13 @@
 package io.dave.snowflake.integration
 
 /**
- * H2 인메모리 데이터베이스와 Redis Testcontainer를 사용하는 통합 테스트 기본 클래스입니다.
+ * MySQL과 Redis Docker 컨테이너를 직접 관리하는 통합 테스트 기본 클래스입니다.
  *
  * **특징**:
- * - H2 인메모리 데이터베이스 사용 (MySQL 호환 모드)
- * - Redis Testcontainer 사용: 격리된 Redis 환경 제공
- * - 테스트 격리: 각 테스트 실행 시 깨끗한 DB 상태
- * - 테스트용 ID 생성기: Worker 초기화 없이 간단한 순차 ID 사용
+ * - MySQL & Redis Docker 컨테이너 직접 실행 (ProcessBuilder 사용)
+ * - 테스트 격리: 각 테스트 실행 시 깨끗한 DB 상태 유지 (deleteAll)
+ * - 실제 환경과 유사한 통합 테스트 환경 제공
+ * - Testcontainers 의존성 없이 Docker만 있으면 실행 가능
  */
 import io.dave.snowflake.adapter.outbound.persistence.entity.SnowflakeWorkersEntity
 import io.dave.snowflake.adapter.outbound.persistence.repository.FailedEventRepository
@@ -27,6 +27,7 @@ import org.springframework.test.context.DynamicPropertySource
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -35,38 +36,94 @@ import java.time.LocalDateTime
 abstract class IntegrationTestBase {
 
     companion object {
-        private var containerId: String? = null
+        private var redisContainerId: String? = null
         private var redisPort: Int = 6379
+
+        private var mysqlContainerId: String? = null
+        private var mysqlPort: Int = 3306
 
         init {
             setupRedis()
+            setupMySQL()
             Runtime.getRuntime().addShutdownHook(Thread {
                 stopRedis()
+                stopMySQL()
             })
         }
 
         private fun setupRedis() {
             try {
-                // Docker 컨테이너 실행
+                // Redis Docker 컨테이너 실행
                 val process = ProcessBuilder("/usr/local/bin/docker", "run", "-d", "-P", "redis:7.0.12-alpine")
                     .start()
-                containerId = BufferedReader(InputStreamReader(process.inputStream)).readLine()?.trim()
+                redisContainerId = BufferedReader(InputStreamReader(process.inputStream)).readLine()?.trim()
 
-                if (containerId != null) {
-                    // 매핑된 포트 확인
-                    val portProcess = ProcessBuilder("/usr/local/bin/docker", "port", containerId!!, "6379")
+                if (redisContainerId != null) {
+                    val portProcess = ProcessBuilder("/usr/local/bin/docker", "port", redisContainerId!!, "6379")
                         .start()
                     val portOutput = BufferedReader(InputStreamReader(portProcess.inputStream)).readLine()?.trim()
                     redisPort = portOutput?.substringAfterLast(":")?.toInt() ?: 6379
-                    println("Redis container started: $containerId on port $redisPort")
+                    println("Redis container started: $redisContainerId on port $redisPort")
                 }
             } catch (e: Exception) {
-                println("Failed to start Redis container via Docker: ${e.message}")
+                println("Failed to start Redis container: ${e.message}")
             }
         }
 
+        private fun setupMySQL() {
+            try {
+                // MySQL Docker 컨테이너 실행
+                val process = ProcessBuilder(
+                    "/usr/local/bin/docker", "run", "-d", "-P",
+                    "-e", "MYSQL_ROOT_PASSWORD=root",
+                    "-e", "MYSQL_DATABASE=snowflake_test",
+                    "mysql:8.0",
+                    "--character-set-server=utf8mb4",
+                    "--collation-server=utf8mb4_unicode_ci"
+                ).start()
+                mysqlContainerId = BufferedReader(InputStreamReader(process.inputStream)).readLine()?.trim()
+
+                if (mysqlContainerId != null) {
+                    val portProcess = ProcessBuilder("/usr/local/bin/docker", "port", mysqlContainerId!!, "3306")
+                        .start()
+                    val portOutput = BufferedReader(InputStreamReader(portProcess.inputStream)).readLine()?.trim()
+                    mysqlPort = portOutput?.substringAfterLast(":")?.toInt() ?: 3306
+                    println("MySQL container started: $mysqlContainerId on port $mysqlPort")
+                    
+                    waitForMySQL()
+                }
+            } catch (e: Exception) {
+                println("Failed to start MySQL container: ${e.message}")
+            }
+        }
+
+        private fun waitForMySQL() {
+            println("Waiting for MySQL to be ready...")
+            val start = System.currentTimeMillis()
+            val timeout = TimeUnit.SECONDS.toMillis(60) // 60초 대기
+
+            while (System.currentTimeMillis() - start < timeout) {
+                try {
+                    // 실제 쿼리를 실행하여 DB 초기화 완료 확인
+                    val process = ProcessBuilder(
+                        "/usr/local/bin/docker", "exec", mysqlContainerId!!,
+                        "mysql", "-u", "root", "-proot", "-e", "SELECT 1"
+                    ).start()
+                    process.waitFor()
+                    if (process.exitValue() == 0) {
+                        println("MySQL is ready!")
+                        return
+                    }
+                } catch (e: Exception) {
+                    // ignore
+                }
+                Thread.sleep(1000)
+            }
+            throw RuntimeException("MySQL failed to start within timeout")
+        }
+
         private fun stopRedis() {
-            containerId?.let {
+            redisContainerId?.let {
                 try {
                     ProcessBuilder("/usr/local/bin/docker", "rm", "-f", it).start().waitFor()
                     println("Redis container stopped: $it")
@@ -76,11 +133,31 @@ abstract class IntegrationTestBase {
             }
         }
 
+        private fun stopMySQL() {
+            mysqlContainerId?.let {
+                try {
+                    ProcessBuilder("/usr/local/bin/docker", "rm", "-f", it).start().waitFor()
+                    println("MySQL container stopped: $it")
+                } catch (e: Exception) {
+                    println("Failed to stop MySQL container: ${e.message}")
+                }
+            }
+        }
+
         @JvmStatic
         @DynamicPropertySource
-        fun redisProperties(registry: DynamicPropertyRegistry) {
+        fun properties(registry: DynamicPropertyRegistry) {
+            // Redis 설정
             registry.add("spring.data.redis.host") { "localhost" }
             registry.add("spring.data.redis.port") { redisPort }
+
+            // MySQL 설정 (H2 덮어쓰기)
+            registry.add("spring.datasource.url") { "jdbc:mysql://localhost:$mysqlPort/snowflake_test?allowPublicKeyRetrieval=true&useSSL=false" }
+            registry.add("spring.datasource.username") { "root" }
+            registry.add("spring.datasource.password") { "root" }
+            registry.add("spring.datasource.driver-class-name") { "com.mysql.cj.jdbc.Driver" }
+            registry.add("spring.jpa.properties.hibernate.dialect") { "org.hibernate.dialect.MySQLDialect" }
+            registry.add("spring.jpa.hibernate.ddl-auto") { "create-drop" } // 테스트용 DB 재생성
         }
     }
 
