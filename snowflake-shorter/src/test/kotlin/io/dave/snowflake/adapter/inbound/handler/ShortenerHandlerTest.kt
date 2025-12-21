@@ -1,6 +1,7 @@
 package io.dave.snowflake.adapter.inbound.handler
 
 import com.ninjasquad.springmockk.MockkBean
+import io.dave.snowflake.adapter.inbound.GlobalErrorWebExceptionHandler
 import io.dave.snowflake.adapter.inbound.dto.ShortenRequest
 import io.dave.snowflake.adapter.inbound.dto.ShortenResponse
 import io.dave.snowflake.adapter.inbound.router.ShorterRouter
@@ -9,6 +10,7 @@ import io.dave.snowflake.application.usecase.ShortenUrlUseCase
 import io.dave.snowflake.domain.model.LongUrl
 import io.dave.snowflake.domain.model.ShortUrl
 import io.dave.snowflake.domain.model.UrlMapping
+import io.dave.snowflake.domain.util.LogMasker
 import io.mockk.coEvery
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -20,19 +22,26 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 
 @WebFluxTest
-@Import(ShorterHandler::class, ShorterRouter::class)
+@Import(
+        ShorterHandler::class,
+        ShorterRouter::class,
+        GlobalErrorWebExceptionHandler::class,
+        LogMasker::class
+)
 @DisplayName("ShorterHandler 테스트")
-@TestPropertySource(properties = ["app.base-url=http://localhost:8080", "app.shorten-path-prefix=/shorten"])
+@TestPropertySource(
+        properties = ["app.base-url=http://localhost:8080", "app.shorten-path-prefix=/shorten"]
+)
 class ShorterHandlerTest {
 
-    @Autowired
-    private lateinit var webTestClient: WebTestClient
+    @Autowired private lateinit var webTestClient: WebTestClient
 
-    @MockkBean
-    private lateinit var shortenUrlUseCase: ShortenUrlUseCase
+    @MockkBean private lateinit var shortenUrlUseCase: ShortenUrlUseCase
 
-    @MockkBean
-    private lateinit var retrieveUrlUseCase: RetrieveUrlUseCase
+    @MockkBean private lateinit var retrieveUrlUseCase: RetrieveUrlUseCase
+
+    @MockkBean(relaxed = true)
+    private lateinit var redisRateLimiter: io.dave.snowflake.domain.util.RedisRateLimiter
 
     @Test
     @DisplayName("단축 URL 생성 요청 시 201 응답과 단축된 URL 정보를 반환한다")
@@ -46,18 +55,20 @@ class ShorterHandlerTest {
         coEvery { shortenUrlUseCase.shorten(longUrlStr) } returns mapping
 
         // when & then
-        webTestClient.post()
-            .uri("/shorten")
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(request)
-            .exchange()
-            .expectStatus().isCreated
-            .expectBody(ShortenResponse::class.java)
-            .consumeWith { result ->
-                val response = result.responseBody!!
-                assert(response.originalUrl == longUrlStr)
-                assert(response.shortUrl == "http://localhost:8080/shorten/$shortUrlStr")
-            }
+        webTestClient
+                .post()
+                .uri("/shorten")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus()
+                .isCreated
+                .expectBody(ShortenResponse::class.java)
+                .consumeWith { result ->
+                    val response = result.responseBody!!
+                    assert(response.originalUrl == longUrlStr)
+                    assert(response.shortUrl == "http://localhost:8080/shorten/$shortUrlStr")
+                }
     }
 
     @Test
@@ -71,11 +82,14 @@ class ShorterHandlerTest {
         coEvery { retrieveUrlUseCase.retrieve(shortUrlStr) } returns mapping
 
         // when & then
-        webTestClient.get()
-            .uri("/shorten/$shortUrlStr")
-            .exchange()
-            .expectStatus().isFound
-            .expectHeader().location(longUrlStr)
+        webTestClient
+                .get()
+                .uri("/shorten/$shortUrlStr")
+                .exchange()
+                .expectStatus()
+                .isFound
+                .expectHeader()
+                .location(longUrlStr)
     }
 
     @Test
@@ -87,10 +101,7 @@ class ShorterHandlerTest {
         coEvery { retrieveUrlUseCase.retrieve(shortUrlStr) } returns null
 
         // when & then
-        webTestClient.get()
-            .uri("/shorten/$shortUrlStr")
-            .exchange()
-            .expectStatus().isNotFound
+        webTestClient.get().uri("/shorten/$shortUrlStr").exchange().expectStatus().isNotFound
     }
 
     @Test
@@ -100,17 +111,21 @@ class ShorterHandlerTest {
         val request = ShortenRequest("invalid-url")
         val exceptionMessage = "Invalid URL format"
 
-        coEvery { shortenUrlUseCase.shorten(any()) } throws IllegalArgumentException(exceptionMessage)
+        coEvery { shortenUrlUseCase.shorten(any()) } throws
+                IllegalArgumentException(exceptionMessage)
 
         // when & then
-        webTestClient.post()
-            .uri("/shorten")
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(request)
-            .exchange()
-            .expectStatus().isBadRequest
-            .expectBody(String::class.java)
-            .isEqualTo("Invalid request: $exceptionMessage")
+        webTestClient
+                .post()
+                .uri("/shorten")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus()
+                .isBadRequest
+                .expectBody()
+                .jsonPath("$.message")
+                .isEqualTo(exceptionMessage)
     }
 
     @Test
@@ -122,14 +137,17 @@ class ShorterHandlerTest {
         coEvery { shortenUrlUseCase.shorten(any()) } throws RuntimeException("Unexpected error")
 
         // when & then
-        webTestClient.post()
-            .uri("/shorten")
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(request)
-            .exchange()
-            .expectStatus().is5xxServerError
-            .expectBody(String::class.java)
-            .isEqualTo("An error occurred")
+        webTestClient
+                .post()
+                .uri("/shorten")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus()
+                .is5xxServerError
+                .expectBody()
+                .jsonPath("$.message")
+                .isEqualTo("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.")
     }
 
     @Test
@@ -139,15 +157,19 @@ class ShorterHandlerTest {
         val shortUrlStr = "invalid"
         val exceptionMessage = "Invalid short URL"
 
-        coEvery { retrieveUrlUseCase.retrieve(shortUrlStr) } throws IllegalArgumentException(exceptionMessage)
+        coEvery { retrieveUrlUseCase.retrieve(shortUrlStr) } throws
+                IllegalArgumentException(exceptionMessage)
 
         // when & then
-        webTestClient.get()
-            .uri("/shorten/$shortUrlStr")
-            .exchange()
-            .expectStatus().isBadRequest
-            .expectBody(String::class.java)
-            .isEqualTo("Invalid request: $exceptionMessage")
+        webTestClient
+                .get()
+                .uri("/shorten/$shortUrlStr")
+                .exchange()
+                .expectStatus()
+                .isBadRequest
+                .expectBody()
+                .jsonPath("$.message")
+                .isEqualTo(exceptionMessage)
     }
 
     @Test
@@ -156,14 +178,18 @@ class ShorterHandlerTest {
         // given
         val shortUrlStr = "abc"
 
-        coEvery { retrieveUrlUseCase.retrieve(shortUrlStr) } throws RuntimeException("Unexpected error")
+        coEvery { retrieveUrlUseCase.retrieve(shortUrlStr) } throws
+                RuntimeException("Unexpected error")
 
         // when & then
-        webTestClient.get()
-            .uri("/shorten/$shortUrlStr")
-            .exchange()
-            .expectStatus().is5xxServerError
-            .expectBody(String::class.java)
-            .isEqualTo("An error occurred")
+        webTestClient
+                .get()
+                .uri("/shorten/$shortUrlStr")
+                .exchange()
+                .expectStatus()
+                .is5xxServerError
+                .expectBody()
+                .jsonPath("$.message")
+                .isEqualTo("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.")
     }
 }

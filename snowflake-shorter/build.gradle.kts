@@ -71,4 +71,18 @@ tasks.jacocoTestReport {
         html.required.set(true)
         csv.required.set(true)
     }
+
+    val excludes = listOf(
+        "**/dto/**",
+        "**/config/**",
+        "**/Q*", // QueryDSL generated classes
+        "**/*Application*",
+        "**/io/dave/snowflake/adapter/outbound/persistence/entity/**" // Entities can also be excluded if preferred
+    )
+
+    classDirectories.setFrom(
+        files(classDirectories.files.map {
+            fileTree(it) { exclude(excludes) }
+        })
+    )
 }

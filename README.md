@@ -42,7 +42,30 @@ docker-compose up -d
 
 ---
 
-## 🛠️ 기술 스택
+## �️ 보안 기능 (Security)
+
+본 서비스는 안정적인 운영과 데이터 보호를 위해 다음과 같은 보안 계층을 갖추고 있습니다.
+
+*   **Rate Limiting**: Redis Lua Script 기반의 IP별 요청 제한 (1분당 100회)으로 DDoS 및 무분별한 ID 스캐닝 방지.
+*   **Log Masking**: PII(개인정보) 및 API Key, Token 등 민감 정보가 로그 파일에 노출되지 않도록 자동 마스킹 처리.
+*   **Strict Validation**: Bean Validation을 이용한 URL 형식(http/https) 및 길이(2048자) 상시 검증.
+*   **Error Abstraction**: 내부 스택트레이스를 외부에 노출하지 않도록 추상화된 에러 응답 제공.
+
+---
+
+## ⚙️ 환경 설정 (Configuration)
+
+보안 강화를 위해 인프라 계정 정보를 환경 변수로 관리합니다. 프로젝트 루트의 `.env.example` 파일을 참고하여 `.env` 파일을 생성하세요.
+
+```bash
+# .env 설정 예시
+MYSQL_ROOT_PASSWORD=your_strong_password
+GRAFANA_ADMIN_PASSWORD=your_admin_password
+```
+
+---
+
+## �🛠️ 기술 스택
 
 *   **Language**: Kotlin 1.9, Java 21 (Virtual Threads Enabled)
 *   **Framework**: Spring Boot 3.2 (WebFlux)
