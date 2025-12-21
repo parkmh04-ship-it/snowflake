@@ -64,46 +64,6 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
-
-    // Manual Docker Container Management for Redis
-    val dockerImageName = "redis:7.0.12-alpine"
-    val containerIdFile = layout.buildDirectory.file("redis-container-id")
-
-    doFirst {
-        val stdout = ByteArrayOutputStream()
-        project.exec {
-            commandLine("/usr/local/bin/docker", "run", "-d", "-P", dockerImageName)
-            standardOutput = stdout
-        }
-        val containerId = stdout.toString().trim()
-        containerIdFile.get().asFile.writeText(containerId)
-        println("Started Redis container: $containerId")
-
-        val portStdout = ByteArrayOutputStream()
-        project.exec {
-            commandLine("/usr/local/bin/docker", "port", containerId, "6379")
-            standardOutput = portStdout
-        }
-        // Output format: 0.0.0.0:32768
-        val portMapping = portStdout.toString().trim()
-        val port = portMapping.substringAfterLast(":")
-        
-        systemProperty("spring.data.redis.host", "localhost")
-        systemProperty("spring.data.redis.port", port)
-        println("Redis running on localhost:$port")
-    }
-
-    doLast {
-        val file = containerIdFile.get().asFile
-        if (file.exists()) {
-            val containerId = file.readText().trim()
-            project.exec {
-                commandLine("/usr/local/bin/docker", "rm", "-f", containerId)
-            }
-            println("Removed Redis container: $containerId")
-            file.delete()
-        }
-    }
 }
 
 tasks.jacocoTestReport {
