@@ -44,7 +44,7 @@ docker-compose up -d
 
 ## 🛠️ 기술 스택
 
-*   **Language**: Kotlin 1.9
+*   **Language**: Kotlin 1.9, Java 21 (Virtual Threads Enabled)
 *   **Framework**: Spring Boot 3.2 (WebFlux)
 *   **Database**: MySQL 8.0 (Prod & Test)
 *   **Concurrency**: Kotlin Coroutines

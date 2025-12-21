@@ -52,6 +52,12 @@ Spring WebFlux는 기본적으로 Reactor를 사용하지만, 우리는 **Kotlin
 *   **불변성**: `val` 프로퍼티 사용으로 불변 객체 보장
 *   **주의사항**: JPA 스펙상 기본 생성자가 필요하므로, 모든 필드에 기본값을 제공하거나 플러그인 활용 필요
 
+### 왜 Coroutines와 Virtual Threads를 함께 사용하는가? (Hybrid Concurrency)
+Kotlin Coroutines가 이미 강력한데 왜 Java 21의 Virtual Threads가 필요할까요?
+*   **Blocking I/O의 격리**: JDBC(JPA)와 같은 Blocking API를 호출할 때, 기존 `Dispatchers.IO`는 OS 스레드를 점유합니다. 이를 **Virtual Threads 기반의 커스텀 Dispatcher** (`virtualDispatcher`)로 대체하여, OS 스레드 차단 없이 수천 개의 동시 DB 요청을 처리할 수 있게 했습니다.
+*   **Coroutines의 강점 유지**: 비즈니스 로직의 흐름 제어, 에러 핸들링, 취소(Cancellation) 등은 여전히 Coroutines의 **구조화된 동시성(Structured Concurrency)** 모델을 따릅니다.
+*   **결론**: **Application Logic (Non-blocking) = Coroutines**, **Blocking Infra (DB) = Virtual Threads** 라는 최적의 조합을 찾아 적용했습니다.
+
 ### 왜 Caffeine 대신 Redis를 사용하는가?
 초기에는 로컬 캐시인 Caffeine을 사용했으나, **Redis**로 전환했습니다.
 *   **분산 환경 지원**: Scale-out 시 모든 인스턴스가 동일한 캐시 데이터를 공유하여 데이터 일관성 보장

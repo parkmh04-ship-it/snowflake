@@ -64,6 +64,23 @@ graph TD
 
 ---
 
+## 📊 관측성 (Observability)
+
+고가용성 시스템을 유지하기 위해 상세한 메트릭을 수집하고 모니터링합니다.
+
+### 1. Virtual Thread Monitoring
+Java 21의 Virtual Thread는 OS 스레드와 1:1로 매핑되지 않으므로, 기존 방식으로는 모니터링이 어렵습니다. 이를 위해 **Micrometer**의 `VirtualThreadMetrics`를 도입했습니다.
+*   **Pinned Threads**: Blocking I/O 등으로 인해 OS 스레드에 고정(Pin)된 Virtual Thread 개수 모니터링
+*   **Active Threads**: 현재 활성화된 Virtual Thread 수 추적
+*   **Executor Stats**: Virtual Thread를 스케줄링하는 ForkJoinPool의 상태 모니터링
+
+### 2. Custom Metrics
+*   **Snowflake ID**: Worker별 ID 할당 속도 및 고갈(Exhaustion) 여부
+*   **URL Shortening**: Base62 인코딩/디코딩 처리 시간
+*   **DLQ**: 처리 실패율 및 재시도 성공률
+
+---
+
 ## 📚 상세 문서 가이드
 
 각 컴포넌트의 상세 구현 내용은 아래 문서들을 참고하세요.
