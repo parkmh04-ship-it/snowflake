@@ -40,6 +40,8 @@ dependencies {
     implementation(libs.springdoc.openapi.starter.webflux.ui) // OpenAPI documentation
     implementation(libs.spring.boot.starter.actuator) // Actuator for monitoring
     implementation(libs.micrometer.registry.prometheus)
+    implementation(libs.micrometer.core)
+    implementation(libs.micrometer.java21)
 
     // Kotlin Coroutines dependencies - ensuring they are available for snowflake-app
     implementation(libs.kotlinxCoroutines) // Core coroutines library

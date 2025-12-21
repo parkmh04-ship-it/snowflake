@@ -1,7 +1,5 @@
 plugins {
     alias(libs.plugins.kotlinJvm)
-    alias(libs.plugins.springBoot) // ✅ [유지] BOM 및 테스트 편의를 위해 유지
-    alias(libs.plugins.kotlinSpring)
     alias(libs.plugins.spotless)
     jacoco // Keep jacoco plugin
 }
@@ -28,18 +26,11 @@ dependencies {
     // Logging (lightweight and standard for libraries)
     api(libs.kotlinLogging) // Use catalog alias
 
-    // Spring Boot basic starter
-    api(libs.spring.boot.starter) // Use catalog alias
-
-    // Micrometer Core API
-    api(libs.micrometer.core) // Use catalog alias
-    api(libs.micrometer.java21) // Use catalog alias
-
-    // Test Dependencies
-    testApi(libs.spring.boot.starter.test) // Use catalog alias
-    testApi(libs.mockk) // Use catalog alias
-    testApi(libs.spring.mockk) // Use catalog alias
-    testApi(libs.kotlinxCoroutinesTest) // Use catalog alias
+    // Test Dependencies (Pure Kotlin/JUnit5)
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinxCoroutinesTest)
 }
 
 tasks.withType<Test> {
@@ -55,10 +46,6 @@ tasks.jacocoTestReport {
     }
 }
 
-// Disable bootJar task as this is a library, not an executable application
-tasks.named("bootJar") {
-    enabled = false
-}
 
 spotless {
     kotlin {
