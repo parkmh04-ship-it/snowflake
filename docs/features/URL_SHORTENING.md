@@ -13,12 +13,16 @@ graph TD
     Filter -->|2. Check| RedisLimiter[(Redis Limiter)]
     Filter -->|3. Call| Controller[Shorter Handler]
     Controller --> UseCase[ShortenUrlUseCase]
-    UseCase -->|4. Generate| Generator[ShortUrlGenerator]
-    Generator -->|Snowflake ID| UseCase
+    subgraph DB Transaction
+        UseCase -->|4. Save| Outbox[(Outbox Table)]
+    end
     UseCase -->|5. Save Cache| RedisCache[(Redis Cache)]
     UseCase -->|6. Publish| Event[Event Publisher]
     UseCase -->|7. Return 201| User
-    Event -.->|Async Batch Save| DB[(MySQL DB)]
+    
+    Relay[Outbox Relay Worker] -->|Polling| Outbox
+    Relay -->|8. Batch Save| MainDB[(MySQL Main DB)]
+    Relay -->|9. Delete| Outbox
 ```
 
 ### 1. 처리율 제한 (Rate Limiting)
@@ -29,9 +33,10 @@ graph TD
 2.  **Base62** 인코딩을 통해 `http://sh.rt/aB34X`와 같은 짧은 키로 변환합니다.
 3.  도메인 서비스(`ShortUrlGenerator`) 내에서 저장소에 키가 존재하는지 확인(Collision Check)하여 충돌을 방지합니다.
 
-### 3. 이중 저장 전략 (Multi-Layer Persistence)
-1.  **Write-Through (Cache)**: 생성된 정보는 Redis에 **즉시** 저장(`awaitSingleOrNull`)되어, 이어지는 첫 번째 조회부터 즉각적인 성능을 보장합니다.
-2.  **Write-Behind (Database)**: 실제 영구 저장은 이벤트를 통해 비동기로 처리됩니다. 이벤트 리스너가 버퍼링 후 배치(Batch)로 MySQL에 저장하며, 실패 시 [DLQ](DLQ.md)로 이관됩니다.
+### 3. 삼중 보장 저장 전략 (Triple-Reliability Persistence)
+1.  **Transactional Outbox**: 비즈니스 트랜잭션 내에서 `outbox` 테이블에 이벤트를 먼저 영속화하여, 애플리케이션 장애 시에도 데이터 유실을 방지합니다.
+2.  **Write-Through (Cache)**: Redis에 즉시 저장하여 이어지는 첫 번째 조회부터 즉각적인 성능을 보장합니다.
+3.  **Outbox Relay**: 백그라운드 워커가 Outbox 데이터를 메인 DB로 안전하게 이관하며 **At-least-once delivery**를 실현합니다.
 
 ---
 

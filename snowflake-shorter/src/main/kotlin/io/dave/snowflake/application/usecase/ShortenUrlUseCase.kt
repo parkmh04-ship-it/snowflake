@@ -1,42 +1,46 @@
 package io.dave.snowflake.application.usecase
 
-import io.dave.snowflake.application.event.ShortUrlCreatedEvent
 import io.dave.snowflake.domain.component.ShortUrlGenerator
 import io.dave.snowflake.domain.model.LongUrl
+import io.dave.snowflake.domain.model.OutboxEvent
 import io.dave.snowflake.domain.model.UrlMapping
-import org.springframework.context.ApplicationEventPublisher
+import io.dave.snowflake.domain.port.outbound.OutboundEventPort
+import io.dave.snowflake.domain.port.outbound.OutboxPort
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
-/**
- * 긴 URL을 단축 URL로 변환하고 저장하는 유스케이스 서비스입니다.
- * 이 서비스는 도메인 계층의 ShortUrlGenerator와 UrlPort를 사용하여 비즈니스 로직을 조율합니다.
- */
+/** 긴 URL을 단축 URL로 변환하고 저장하는 유스케이스 서비스입니다. */
 @Service
 class ShortenUrlUseCase(
-    private val shortUrlGenerator: ShortUrlGenerator,
-    private val eventPublisher: ApplicationEventPublisher // 이벤트 발행기 추가
+        private val shortUrlGenerator: ShortUrlGenerator,
+        private val outboundEventPort: OutboundEventPort,
+        private val outboxPort: OutboxPort
 ) {
 
-    /**
-     * 주어진 긴 URL을 단축합니다.
-     * 이미 존재하는 긴 URL이라면 기존의 단축 URL 매핑을 반환하고,
-     * 새로운 URL이라면 새로운 단축 URL을 생성하여 저장합니다.
-     *
-     * @param longUrlStr 단축할 원본 긴 URL 문자열.
-     * @return 생성되거나 조회된 UrlMapping 객체.
-     */
+    /** 주어진 긴 URL을 단축하고 Outbox에 기록합니다. */
+    @Transactional
     suspend fun shorten(longUrlStr: String): UrlMapping {
         val longUrl = LongUrl(longUrlStr)
 
-        // 1. 새로운 단축 URL 생성 (중복 검사 없이 바로 생성)
+        // 1. 새로운 단축 URL 생성
         val shortUrl = shortUrlGenerator.generate()
         val newMapping = UrlMapping(shortUrl, longUrl)
 
-        // 2. 이벤트 발행 (DB 적재는 이벤트 리스너가 비동기로 처리)
-        // 이벤트 발행에 실패하면 예외가 발생하여 캐시 저장 및 반환 로직이 실행되지 않습니다.
-        eventPublisher.publishEvent(ShortUrlCreatedEvent(newMapping.shortUrl, newMapping.longUrl, newMapping.createdAt))
+        // 2. Outbox에 이벤트 기록 (트랜잭션 내에서 영속화 보장)
+        val payload = Json.encodeToString(newMapping)
+        outboxPort.save(
+                OutboxEvent(
+                        aggregateType = "UrlMapping",
+                        aggregateId = newMapping.shortUrl.value,
+                        payload = payload
+                )
+        )
 
-        // 4. 생성된 매핑 객체를 바로 반환 (응답 시간 최소화)
+        // 3. (Optional) 캐시 등을 위해 즉시 이벤트 발행 - Outbox Relay가 처리할 때까지 기다리지 않고 성능 최적화
+        outboundEventPort.publish(newMapping)
+
         return newMapping
     }
 }

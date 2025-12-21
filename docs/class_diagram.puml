@@ -44,6 +44,13 @@ package "Module: snowflake-shorter-domain" #CCFFCC {
             +longUrl: LongUrl
             +createdAt: Long
         }
+        class OutboxEvent {
+            +id: Long?
+            +aggregateType: String
+            +aggregateId: String
+            +payload: String
+            +createdAt: LocalDateTime
+        }
     }
 
     package "io.dave.snowflake.domain.port" {
@@ -53,16 +60,16 @@ package "Module: snowflake-shorter-domain" #CCFFCC {
         package "outbound" {
             interface UrlPort {
                 +save(mapping: UrlMapping): UrlMapping
+                +saveAll(mappings: Flow<UrlMapping>): Flow<UrlMapping>
                 +findByShortUrl(shortUrl: ShortUrl): UrlMapping?
-                +existsByShortUrl(shortUrl: ShortUrl): Boolean
             }
-            interface WorkerPort {
-                +findByWorkerNums(workerNums: List<Long>): Flow<Worker>
-                +updateUpdatedAt(workerNums: List<Long>, updatedAt: LocalDateTime): Int
-                +saveAll(workers: Flow<Worker>): Flow<Worker>
+            interface OutboxPort {
+                +save(event: OutboxEvent): OutboxEvent
+                +findUnprocessedEvents(limit: Int): List<OutboxEvent>
+                +deleteEvents(ids: List<Long>)
             }
-            interface WorkerIdRepository {
-                +assignWorkerIds(instanceId: String, requiredCount: Int): List<Long>
+            interface OutboundEventPort {
+                +publish(mapping: UrlMapping)
             }
         }
     }
@@ -81,80 +88,39 @@ package "Module: snowflake-shorter" #CCEEFF {
     package "io.dave.snowflake.application.usecase" {
         class ShortenUrlUseCase <<UseCase>> {
             -shortUrlGenerator: ShortUrlGenerator
-            -urlPort: UrlPort
+            -outboxPort: OutboxPort
+            -outboundEventPort: OutboundEventPort
             +shorten(longUrlStr: String): UrlMapping
-        }
-        class RetrieveUrlUseCase <<UseCase>> {
-            -urlPort: UrlPort
-            +retrieve(shortUrlStr: String): UrlMapping?
         }
     }
 
-    package "io.dave.snowflake.adapter.inbound" {
-        class ShorterHandler <<Web Handler>> {
-            -shortenUrlUseCase: ShortenUrlUseCase
-            -retrieveUrlUseCase: RetrieveUrlUseCase
-            +shorten(request: ServerRequest): ServerResponse
-            +redirect(request: ServerRequest): ServerResponse
-        }
-        class RateLimitFilter <<Web Filter>> {
-            -rateLimiter: RateLimiter
-            +filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void>
+    package "io.dave.snowflake.application.worker" {
+        class OutboxRelayWorker <<Worker>> {
+            -outboxPort: OutboxPort
+            -urlPort: UrlPort
+            +processOutboxEvents()
         }
     }
 
     package "io.dave.snowflake.adapter.outbound" {
         package "persistence" {
-            class UrlPersistenceAdapter <<Adapter>> {
-                -shortUrlRepository: ShortUrlRepository
-                +save(mapping: UrlMapping): UrlMapping
-                +findByShortUrl(shortUrl: ShortUrl): UrlMapping?
+            class OutboxPersistenceAdapter <<Adapter>> {
+                -outboxRepository: OutboxRepository
+                +save(event: OutboxEvent): OutboxEvent
             }
-            class WorkerPersistenceAdapter <<Adapter>> {
-                -workerRepository: WorkerRepository
-                +findByWorkerNums(workerNums: List<Long>): Flow<Worker>
-            }
-        }
-        package "cache" {
-            class RedisRateLimiter <<Adapter>> {
-                -reactiveRedisTemplate: ReactiveRedisTemplate
-                +isAllowed(key: String, limit: Int, windowInSeconds: Int): Boolean
-            }
-        }
-    }
-
-    package "io.dave.snowflake.config.metrics" {
-        class MonitoredIdGenerator {
-            -delegate: IdGenerator
-            -meterRegistry: MeterRegistry
-            +nextId(): Long
         }
     }
 }
 
 ' --- Relationships ---
 
-' Module Dependencies
-"Module: snowflake-shorter" ..> "Module: snowflake-shorter-domain" : depends on
-"Module: snowflake-shorter" ..> "Module: snowflake-core" : depends on
-"Module: snowflake-shorter-domain" ..> "Module: snowflake-core" : depends on
-
 ' Implementation
-IdGenerator <|.. SnowflakeIdGenerator
-IdGenerator <|.. PooledIdGenerator
-IdGenerator <|.. MonitoredIdGenerator
-
-RateLimiter <|.. RedisRateLimiter
-UrlPort <|.. UrlPersistenceAdapter
-WorkerPort <|.. WorkerPersistenceAdapter
+OutboxPort <|.. OutboxPersistenceAdapter
 
 ' Usage
-ShortenUrlUseCase --> ShortUrlGenerator : uses
-ShortenUrlUseCase --> UrlPort : uses
-ShorterHandler --> ShortenUrlUseCase : uses
-RateLimitFilter --> RateLimiter : uses
-ShortUrlGenerator --> PooledIdGenerator : uses
-ShortUrlGenerator --> UrlPort : uses
-MonitoredIdGenerator o-- IdGenerator : decorates
+ShortenUrlUseCase --> OutboxPort : uses
+ShortenUrlUseCase --> OutboundEventPort : uses
+OutboxRelayWorker --> OutboxPort : uses
+OutboxRelayWorker --> UrlPort : uses
 
 @enduml

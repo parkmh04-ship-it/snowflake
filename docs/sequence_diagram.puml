@@ -1,87 +1,82 @@
 @startuml
 autonumber
 
-title Snowflake URL Shorter Sequences (Rate Limiting & Correlation)
+title Snowflake URL Shorter Sequences (Transactional Outbox & Relay)
 
 actor Client
-participant "RateLimitFilter\n(Filter)" as Filter
-participant "RedisRateLimiter\n(Adapter)" as RedisLimiter
-participant "ShorterHandler\n(Handler)" as Handler
+participant "ShorterHandler\n(Web)" as Handler
 participant "ShortenUrlUseCase\n(UseCase)" as UseCase
-participant "ShortUrlGenerator\n(Domain Service)" as Generator
+participant "OutboxPort\n(Port)" as OutboxPort
+participant "OutboxPersistenceAdapter\n(Adapter)" as OutboxAdapter
+participant "Redis" as Redis
+participant "OutboundEventPort\n(Port)" as EventPort
+participant "OutboxRelayWorker\n(Worker)" as RelayWorker
 participant "UrlPort\n(Port)" as UrlPort
-participant "UrlPersistenceAdapter\n(Adapter)" as UrlAdapter
-database "Redis" as Redis
 database "MySQL" as DB
 
-== Scenario 1: Shorten URL with Rate Limiting ==
+== Scenario 1: Shorten URL with Outbox ==
 
-Client -> Filter: POST /shorten
-activate Filter
+Client -> Handler: POST /shorten
+activate Handler
 
-    Filter -> RedisLimiter: isAllowed(IP)
-    activate RedisLimiter
-        RedisLimiter -> Redis: EVAL "ratelimit.lua"
-        activate Redis
-        Redis --> RedisLimiter: Allowed (true)
-        deactivate Redis
-    RedisLimiter --> Filter: true
-    deactivate RedisLimiter
+    Handler -> UseCase: shorten(longUrl)
+    activate UseCase
 
-    Filter -> Handler: handleRequest
-    activate Handler
-
-        Handler -> UseCase: shorten(longUrl)
-        activate UseCase
-
-            UseCase -> UrlPort: findByLongUrl(longUrl)
-            activate UrlPort
-                UrlPort -> UrlAdapter: findByLongUrl
-                activate UrlAdapter
-                    UrlAdapter -> DB: SELECT ...
+        UseCase -> UseCase: 1. Generate ShortUrl
+        
+        group Transactional Outbox [DB Transaction]
+            UseCase -> OutboxPort: 2. save(OutboxEvent)
+            activate OutboxPort
+                OutboxPort -> OutboxAdapter: save
+                activate OutboxAdapter
+                    OutboxAdapter -> DB: INSERT INTO outbox
                     activate DB
-                    DB --> UrlAdapter: null
+                    DB --> OutboxAdapter: Success
                     deactivate DB
-                UrlAdapter --> UrlPort: null
-                deactivate UrlAdapter
-            UrlPort --> UseCase: null
-            deactivate UrlPort
+                OutboxAdapter --> OutboxPort: Saved Event
+                deactivate OutboxAdapter
+            OutboxPort --> UseCase: Success
+            deactivate OutboxPort
+        end
 
-            UseCase -> Generator: generate()
-            activate Generator
-                Generator -> Generator: Generate Snowflake ID\n(Base62 Encode)
-                Generator -> UrlPort: existsByShortUrl
-                activate UrlPort
-                    UrlPort -> UrlAdapter: exists
-                    UrlAdapter -> DB: EXISTS
-                UrlPort --> Generator: false
-                deactivate UrlPort
-            Generator --> UseCase: ShortUrl
-            deactivate Generator
+        UseCase -> Redis: 3. SET Cache (awaitSingleOrNull)
+        activate Redis
+        Redis --> UseCase: OK
+        deactivate Redis
 
-            UseCase -> UrlPort: save(mapping)
-            activate UrlPort
-                UrlPort -> UrlAdapter: save
-                activate UrlAdapter
-                    UrlAdapter -> DB: INSERT (Async/Batch)
-                UrlAdapter --> UrlPort: Mapping
-                deactivate UrlAdapter
-            UrlPort --> UseCase: Mapping
-            deactivate UrlPort
-
-            ' Redis Caching Refactored with Coroutines
-            UseCase -> Redis: SET "short:{id}" (awaitSingleOrNull)
-            activate Redis
-            Redis --> UseCase: OK
-            deactivate Redis
-
-        UseCase --> Handler: Result
+        UseCase -> EventPort: 4. publish(ShortUrlCreatedEvent)
+        note right of EventPort: Memory-based async processing\n(for internal monitoring/cache)
+        
+        UseCase --> Handler: 5. Return Mapping
         deactivate UseCase
 
-    Handler --> Filter: 201 Created
+    Handler --> Client: 201 Created
     deactivate Handler
 
-Filter --> Client: 201 Created
-deactivate Filter
+== Scenario 2: Outbox Relay Process (Background) ==
+
+loop every 5 seconds
+    RelayWorker -> OutboxPort: 1. findUnprocessedEvents(limit)
+    activate OutboxPort
+        OutboxPort -> DB: SELECT * FROM outbox
+    OutboxPort --> RelayWorker: List<OutboxEvent>
+    deactivate OutboxPort
+
+    alt Events Exist
+        RelayWorker -> RelayWorker: 2. Decode Payloads (JSON)
+        
+        RelayWorker -> UrlPort: 3. saveAll(mappings)
+        activate UrlPort
+            UrlPort -> DB: INSERT INTO shorter_history (Batch)
+        UrlPort --> RelayWorker: Success
+        deactivate UrlPort
+
+        RelayWorker -> OutboxPort: 4. deleteEvents(ids)
+        activate OutboxPort
+            OutboxPort -> DB: DELETE FROM outbox
+        OutboxPort --> RelayWorker: Success
+        deactivate OutboxPort
+    end
+end
 
 @enduml
