@@ -18,11 +18,11 @@ import kotlin.math.min
  * @throws Exception 모든 재시도가 실패한 경우 마지막 예외를 던집니다
  */
 suspend fun <T> retryWithExponentialBackoff(
-        maxAttempts: Int = 3,
-        initialDelayMillis: Long = 100,
-        maxDelayMillis: Long = 10000,
-        factor: Double = 2.0,
-        block: suspend () -> T
+    maxAttempts: Int = 3,
+    initialDelayMillis: Long = 100,
+    maxDelayMillis: Long = 10000,
+    factor: Double = 2.0,
+    block: suspend () -> T
 ): T {
     val logger = KotlinLogging.logger {}
     var currentDelay = initialDelayMillis
@@ -70,21 +70,21 @@ sealed class RetryResult<out T> {
  * @return RetryResult (Success 또는 Failure)
  */
 suspend fun <T> retryWithExponentialBackoffCatching(
-        maxAttempts: Int = 3,
-        initialDelayMillis: Long = 100,
-        maxDelayMillis: Long = 10000,
-        factor: Double = 2.0,
-        block: suspend () -> T
+    maxAttempts: Int = 3,
+    initialDelayMillis: Long = 100,
+    maxDelayMillis: Long = 10000,
+    factor: Double = 2.0,
+    block: suspend () -> T
 ): RetryResult<T> {
     return try {
         val result =
-                retryWithExponentialBackoff(
-                        maxAttempts = maxAttempts,
-                        initialDelayMillis = initialDelayMillis,
-                        maxDelayMillis = maxDelayMillis,
-                        factor = factor,
-                        block = block
-                )
+            retryWithExponentialBackoff(
+                maxAttempts = maxAttempts,
+                initialDelayMillis = initialDelayMillis,
+                maxDelayMillis = maxDelayMillis,
+                factor = factor,
+                block = block
+            )
         RetryResult.Success(result)
     } catch (e: Exception) {
         RetryResult.Failure(e, maxAttempts)

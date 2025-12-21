@@ -56,7 +56,7 @@ class LongUrlTest {
 
     @ParameterizedTest(name = "잘못된 프로토콜: \"{0}\"")
     @ValueSource(
-            strings = ["ftp://example.com", "example.com", "www.example.com", "htp://example.com"]
+        strings = ["ftp://example.com", "example.com", "www.example.com", "htp://example.com"]
     )
     @DisplayName("http:// 또는 https://로 시작하지 않으면 예외가 발생한다")
     fun `should throw exception when URL does not start with http or https`(invalidUrl: String) {

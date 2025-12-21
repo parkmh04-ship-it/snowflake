@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional
 class DeadLetterQueueAdapter(
     private val failedEventRepository: FailedEventRepository,
 
-) :
+    ) :
     DeadLetterQueuePort {
 
     @Transactional

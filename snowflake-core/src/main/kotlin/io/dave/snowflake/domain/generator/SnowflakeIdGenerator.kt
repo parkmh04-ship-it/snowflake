@@ -27,23 +27,28 @@ class SnowflakeIdGenerator(
 
     /** 마지막으로 ID를 생성한 타임스탬프 (밀리초 단위) */
     private var lastTimestamp = -1L
+
     /** 동일 밀리초 내에서 생성된 ID의 시퀀스 번호 */
     private var sequence = 0L
+
     /** `nextId` 메서드의 동시성 제어를 위한 뮤텍스 */
     private val mutex = Mutex()
 
     /** 워커 ID에 할당된 비트 수 */
     private val workerIdBits = 10L
+
     /** 시퀀스에 할당된 비트 수 */
     private val sequenceBits = 12L
 
     /** 최대 워커 ID (2^10 - 1) */
     private val maxWorkerId = (-1L shl workerIdBits.toInt()).inv()
+
     /** 최대 시퀀스 번호 (2^12 - 1) */
     private val maxSequence = (-1L shl sequenceBits.toInt()).inv()
 
     /** 워커 ID를 타임스탬프 비트만큼 왼쪽으로 이동시키기 위한 시프트 값 */
     private val workerIdShift = sequenceBits
+
     /** 타임스탬프를 가장 상위 비트로 이동시키기 위한 시프트 값 */
     private val timestampLeftShift = sequenceBits + workerIdBits
 

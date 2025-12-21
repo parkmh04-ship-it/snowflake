@@ -16,7 +16,10 @@ interface WorkerRepository : JpaRepository<SnowflakeWorkersEntity, Long> {
 
     @Modifying
     @Query("UPDATE SnowflakeWorkersEntity w SET w.updatedAt = :updatedAt WHERE w.workerNum IN :workerNums")
-    fun updateUpdatedAtByWorkerNums(@Param("workerNums") workerNums: List<Long>, @Param("updatedAt") updatedAt: LocalDateTime): Int
+    fun updateUpdatedAtByWorkerNums(
+        @Param("workerNums") workerNums: List<Long>,
+        @Param("updatedAt") updatedAt: LocalDateTime
+    ): Int
 
     @Modifying
     @Query("UPDATE SnowflakeWorkersEntity w SET w.status = 'IDLE', w.workerName = 'NONE', w.updatedAt = :updatedAt WHERE w.workerNum IN :workerNums")

@@ -5,13 +5,15 @@ import io.dave.snowflake.domain.port.outbound.OutboundEventPort
 import io.dave.snowflake.domain.port.outbound.OutboxPort
 import io.dave.snowflake.domain.port.outbound.UrlPort
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Outbox 테이블을 폴링하여 처리되지 않은 이벤트를 실제 DB(short_urls)로 이관하는 Relay Worker입니다. 이 워커는 애플리케이션 장애 시에도 데이터
@@ -19,9 +21,9 @@ import org.springframework.stereotype.Component
  */
 @Component
 class OutboxRelayWorker(
-        private val outboxPort: OutboxPort,
-        private val urlPort: UrlPort,
-        private val outboundEventPort: OutboundEventPort
+    private val outboxPort: OutboxPort,
+    private val urlPort: UrlPort,
+    private val outboundEventPort: OutboundEventPort
 ) {
     private val logger = KotlinLogging.logger {}
     private val isRunning = AtomicBoolean(false)
@@ -39,16 +41,16 @@ class OutboxRelayWorker(
                 logger.info { "[Outbox] Found ${events.size} unprocessed events. Relaying..." }
 
                 val mappings =
-                        events.mapNotNull { event ->
-                            try {
-                                Json.decodeFromString<UrlMapping>(event.payload)
-                            } catch (e: Exception) {
-                                logger.error(e) {
-                                    "[Outbox] Failed to decode event payload: ${event.id}"
-                                }
-                                null
+                    events.mapNotNull { event ->
+                        try {
+                            Json.decodeFromString<UrlMapping>(event.payload)
+                        } catch (e: Exception) {
+                            logger.error(e) {
+                                "[Outbox] Failed to decode event payload: ${event.id}"
                             }
+                            null
                         }
+                    }
 
                 if (mappings.isNotEmpty()) {
                     // 1. 실제 DB 저장 (Batch)

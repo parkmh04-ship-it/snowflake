@@ -78,8 +78,10 @@ class ShorterRouter {
                     operationId = "ping",
                     summary = "상태 확인 엔드포인트",
                     responses = [
-                        ApiResponse(responseCode = "200", description = "응답: pong",
-                                    content = [Content(schema = Schema(implementation = String::class))])
+                        ApiResponse(
+                            responseCode = "200", description = "응답: pong",
+                            content = [Content(schema = Schema(implementation = String::class))]
+                        )
                     ]
                 )
             ),
@@ -103,7 +105,7 @@ class ShorterRouter {
             POST("/shorten", handler::shorten)
         }
         GET("/shorten/{shortUrl}", handler::redirect)
-        
+
         // Health check endpoints
         GET("/ping", handler::ping)
         GET("/health", handler::health)

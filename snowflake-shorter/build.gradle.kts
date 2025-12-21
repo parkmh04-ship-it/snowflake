@@ -53,10 +53,10 @@ dependencies {
     testImplementation(libs.mockk) // Mocking framework
     testImplementation(libs.spring.mockk) // Spring integration for MockK
     testImplementation(libs.kotlinxCoroutinesTest) // Coroutines testing
-    
+
     // H2 Database for in-memory integration testing
     testImplementation(libs.h2)
-    
+
     // Testcontainers for integration testing
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.redis)

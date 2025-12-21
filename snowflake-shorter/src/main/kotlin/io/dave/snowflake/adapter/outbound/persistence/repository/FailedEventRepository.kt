@@ -18,7 +18,7 @@ interface FailedEventRepository : JpaRepository<FailedEventsEntity, Long> {
 
     /** 재시도 가능한 이벤트를 조회합니다. (PENDING 상태이고 재시도 횟수가 MAX_RETRY_COUNT 미만) */
     @Query(
-            """
+        """
         SELECT e FROM FailedEventsEntity e 
         WHERE e.status = 'PENDING' 
         AND e.retryCount < :maxRetryCount 
@@ -31,7 +31,7 @@ interface FailedEventRepository : JpaRepository<FailedEventsEntity, Long> {
     @Modifying
     @Transactional
     @Query(
-            """
+        """
         DELETE FROM FailedEventsEntity e 
         WHERE e.status = 'RESOLVED' 
         AND e.failedAt < :olderThan

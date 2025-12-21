@@ -19,7 +19,7 @@ class PooledIdGenerator(
         // 여기서는 리스트 사이즈로 모듈러 연산 전에 양수로 보정하는 것이 안전함.
         // 간단하게 Math.abs 사용보다 비트 연산으로 양수 변환 (0x7FFFFFFF)
         val safeIndex = (currentIndex and 0x7FFFFFFF) % idGenerators.size
-        
+
         return idGenerators[safeIndex].nextId()
     }
 }

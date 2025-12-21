@@ -27,8 +27,7 @@ class RateLimitFilter(private val rateLimiter: RateLimiter) : WebFilter {
 
         // /shorten 엔드포인트에 대해 우선적으로 제안
         if (path.startsWith("/shorten")) {
-            return mono { rateLimiter.isAllowed(clientIp, LIMIT, WINDOW_SECONDS) }.flatMap {
-                    isAllowed ->
+            return mono { rateLimiter.isAllowed(clientIp, LIMIT, WINDOW_SECONDS) }.flatMap { isAllowed ->
                 if (!isAllowed) {
                     logger.warn { "[RateLimit] Request rejected for IP: $clientIp" }
                     val response = exchange.response

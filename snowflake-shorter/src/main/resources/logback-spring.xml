@@ -3,7 +3,6 @@
     <!-- Spring Boot 기본 설정 로드를 위한 SpringProperty -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
-ㅎ
     <!-- 콘솔 Appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -15,8 +14,6 @@
     <!-- 기본 로거 설정 -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-        <!-- <appender-ref ref="FILE"/> -->
-        <!-- <appender-ref ref="JSON_CONSOLE"/> -->
     </root>
 
     <!-- 프로파일별 설정 예시 -->

@@ -57,10 +57,12 @@ class ShortUrlGeneratorTest {
         val base62EncodedId = Base62Encoder.encode(snowflakeId)
         val expectedFirstRetryCharIndex = Base62Encoder.ALPHABET.indexOf('a') // 'a'의 인덱스
         val expectedSecondRetryCharIndex = Base62Encoder.ALPHABET.indexOf('b') // 'b'의 인덱스
-        
+
         val existingShortUrl = ShortUrl(base62EncodedId)
-        val retryShortUrl = ShortUrl("${base62EncodedId}${Base62Encoder.ALPHABET[expectedFirstRetryCharIndex]}") // 첫 번째 재시도
-        val finalShortUrl = ShortUrl("${base62EncodedId}${Base62Encoder.ALPHABET[expectedFirstRetryCharIndex]}${Base62Encoder.ALPHABET[expectedSecondRetryCharIndex]}") // 두 번째 재시도
+        val retryShortUrl =
+            ShortUrl("${base62EncodedId}${Base62Encoder.ALPHABET[expectedFirstRetryCharIndex]}") // 첫 번째 재시도
+        val finalShortUrl =
+            ShortUrl("${base62EncodedId}${Base62Encoder.ALPHABET[expectedFirstRetryCharIndex]}${Base62Encoder.ALPHABET[expectedSecondRetryCharIndex]}") // 두 번째 재시도
 
         coEvery { pooledIdGenerator.nextId() } returnsMany listOf(snowflakeId, snowflakeId, snowflakeId, snowflakeId)
         every { random.nextInt(any()) } returns expectedFirstRetryCharIndex andThen expectedSecondRetryCharIndex // Random 모킹

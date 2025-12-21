@@ -49,11 +49,11 @@ class Base62EncoderTest {
     fun `encode specific numbers correctly`() {
         // Given: 실제 Base62Encoder 구현 (62자 알파벳)에 따른 인코딩 결과
         val testCases =
-                mapOf(
-                        1L to Base62Encoder.ALPHABET[1].toString(),
-                        10L to Base62Encoder.ALPHABET[10].toString(),
-                        61L to Base62Encoder.ALPHABET[61].toString(),
-                )
+            mapOf(
+                1L to Base62Encoder.ALPHABET[1].toString(),
+                10L to Base62Encoder.ALPHABET[10].toString(),
+                61L to Base62Encoder.ALPHABET[61].toString(),
+            )
 
         // When & Then
         testCases.forEach { (input, expected) ->
@@ -117,8 +117,8 @@ class Base62EncoderTest {
         testInputs.forEach { input ->
             val result = Base62Encoder.encode(input)
             assertTrue(
-                    result.all { it in Base62Encoder.ALPHABET },
-                    "입력 $input 의 인코딩 결과 '$result' 는 알파벳 문자만 포함해야 합니다"
+                result.all { it in Base62Encoder.ALPHABET },
+                "입력 $input 의 인코딩 결과 '$result' 는 알파벳 문자만 포함해야 합니다"
             )
         }
     }

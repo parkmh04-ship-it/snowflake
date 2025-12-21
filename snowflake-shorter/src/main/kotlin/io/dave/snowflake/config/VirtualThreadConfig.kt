@@ -13,22 +13,10 @@ import java.util.concurrent.Executors
 @Configuration
 class VirtualThreadConfig {
 
-//    @Bean("virtualThreadExecutor")
-//    fun virtualThreadExecutor(meterRegistry: MeterRegistry): ExecutorService =
-//        Executors.newVirtualThreadPerTaskExecutor().also { VirtualThreadMetrics().bindTo(meterRegistry) }
-//
-//    @Bean("virtualThreadDispatcher")
-//    fun virtualThreadDispatcher(
-//        @Qualifier("virtualThreadExecutor")
-//        executor: ExecutorService
-//    ): CoroutineDispatcher = executor.asCoroutineDispatcher()
-
     @Bean("virtualThreadExecutor")
     fun virtualThreadExecutor(meterRegistry: MeterRegistry): ExecutorService =
         virtualTaskExecutor.also { VirtualThreadMetrics().bindTo(meterRegistry) }
 }
-
-
 
 
 private val virtualTaskExecutor = Executors.newVirtualThreadPerTaskExecutor()

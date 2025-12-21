@@ -52,13 +52,13 @@ data class FailedEvent(
 enum class FailedEventStatus {
     /** 재처리 대기 중 */
     PENDING,
-    
+
     /** 재처리 중 */
     PROCESSING,
-    
+
     /** 재처리 성공 */
     RESOLVED,
-    
+
     /** 최대 재시도 횟수 초과로 실패 */
     FAILED
 }

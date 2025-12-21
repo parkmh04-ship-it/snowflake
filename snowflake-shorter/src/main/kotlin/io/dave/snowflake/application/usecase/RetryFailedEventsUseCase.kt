@@ -17,8 +17,8 @@ import org.springframework.stereotype.Service
  */
 @Service
 class RetryFailedEventsUseCase(
-        private val deadLetterQueuePort: DeadLetterQueuePort,
-        private val urlPort: UrlPort
+    private val deadLetterQueuePort: DeadLetterQueuePort,
+    private val urlPort: UrlPort
 ) {
     private val logger = KotlinLogging.logger {}
 
@@ -51,15 +51,15 @@ class RetryFailedEventsUseCase(
 
             // 재시도 실행
             val result =
-                    retryWithExponentialBackoffCatching(
-                            maxAttempts = 2, // DLQ 재처리는 2회만 시도 (이미 3회 실패한 이벤트)
-                            initialDelayMillis = 200,
-                            maxDelayMillis = 5000
-                    ) {
-                        // 단일 이벤트를 UrlMapping으로 변환하여 저장
-                        val mapping = failedEvent.toUrlMapping()
-                        urlPort.saveAll(listOf(mapping).asFlow()).toList()
-                    }
+                retryWithExponentialBackoffCatching(
+                    maxAttempts = 2, // DLQ 재처리는 2회만 시도 (이미 3회 실패한 이벤트)
+                    initialDelayMillis = 200,
+                    maxDelayMillis = 5000
+                ) {
+                    // 단일 이벤트를 UrlMapping으로 변환하여 저장
+                    val mapping = failedEvent.toUrlMapping()
+                    urlPort.saveAll(listOf(mapping).asFlow()).toList()
+                }
 
             when (result) {
                 is io.dave.snowflake.domain.util.RetryResult.Success -> {
@@ -70,28 +70,29 @@ class RetryFailedEventsUseCase(
                     successCount++
                     logger.info { "[DLQ Retry] Successfully retried event ID: ${failedEvent.id}" }
                 }
+
                 is io.dave.snowflake.domain.util.RetryResult.Failure -> {
                     // 실패: 재시도 횟수 증가
                     val updatedEvent =
-                            processingEvent.incrementRetry(
-                                    result.exception.message ?: "Unknown error"
-                            )
+                        processingEvent.incrementRetry(
+                            result.exception.message ?: "Unknown error"
+                        )
 
                     // 최대 재시도 횟수 초과 시 FAILED 상태로 변경
                     val finalEvent =
-                            if (updatedEvent.retryCount >= FailedEvent.MAX_RETRY_COUNT) {
-                                permanentFailureCount++
-                                logger.error {
-                                    "[DLQ Retry] Event ID ${failedEvent.id} exceeded max retry count. Marking as FAILED."
-                                }
-                                updatedEvent.withStatus(FailedEventStatus.FAILED)
-                            } else {
-                                failureCount++
-                                logger.warn {
-                                    "[DLQ Retry] Event ID ${failedEvent.id} retry failed. Retry count: ${updatedEvent.retryCount}"
-                                }
-                                updatedEvent.withStatus(FailedEventStatus.PENDING)
+                        if (updatedEvent.retryCount >= FailedEvent.MAX_RETRY_COUNT) {
+                            permanentFailureCount++
+                            logger.error {
+                                "[DLQ Retry] Event ID ${failedEvent.id} exceeded max retry count. Marking as FAILED."
                             }
+                            updatedEvent.withStatus(FailedEventStatus.FAILED)
+                        } else {
+                            failureCount++
+                            logger.warn {
+                                "[DLQ Retry] Event ID ${failedEvent.id} retry failed. Retry count: ${updatedEvent.retryCount}"
+                            }
+                            updatedEvent.withStatus(FailedEventStatus.PENDING)
+                        }
 
                     deadLetterQueuePort.update(finalEvent)
                 }
@@ -125,16 +126,16 @@ class RetryFailedEventsUseCase(
     }
 
     private fun FailedEvent.toUrlMapping() =
-            io.dave.snowflake.domain.model.UrlMapping(
-                    shortUrl = this.shortUrl,
-                    longUrl = this.longUrl,
-                    createdAt = this.createdAt
-            )
+        io.dave.snowflake.domain.model.UrlMapping(
+            shortUrl = this.shortUrl,
+            longUrl = this.longUrl,
+            createdAt = this.createdAt
+        )
 
     /** 재처리 결과를 나타내는 데이터 클래스 */
     data class RetryResult(
-            val successCount: Int,
-            val failureCount: Int,
-            val permanentFailureCount: Int
+        val successCount: Int,
+        val failureCount: Int,
+        val permanentFailureCount: Int
     )
 }

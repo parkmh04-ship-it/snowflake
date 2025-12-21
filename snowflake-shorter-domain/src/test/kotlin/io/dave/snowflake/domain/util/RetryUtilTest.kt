@@ -34,11 +34,11 @@ class RetryUtilTest {
 
         // When
         val result =
-                retryWithExponentialBackoff(
-                        maxAttempts = 3,
-                        initialDelayMillis = 100,
-                        block = block
-                )
+            retryWithExponentialBackoff(
+                maxAttempts = 3,
+                initialDelayMillis = 100,
+                block = block
+            )
 
         // Then
         assertEquals(expectedResult, result)
@@ -48,57 +48,57 @@ class RetryUtilTest {
     @Test
     @DisplayName("첫 번째 실패 후 두 번째 시도에서 성공한다")
     fun `retryWithExponentialBackoff should succeed on second attempt after one failure`() =
-            runTest {
-                // Given
-                val expectedResult = "Success"
-                var callCount = 0
-                val block: suspend () -> String = {
-                    callCount++
-                    if (callCount == 1) {
-                        throw RuntimeException("First attempt failed")
-                    } else {
-                        expectedResult
-                    }
+        runTest {
+            // Given
+            val expectedResult = "Success"
+            var callCount = 0
+            val block: suspend () -> String = {
+                callCount++
+                if (callCount == 1) {
+                    throw RuntimeException("First attempt failed")
+                } else {
+                    expectedResult
                 }
-
-                // When
-                val result =
-                        retryWithExponentialBackoff(
-                                maxAttempts = 3,
-                                initialDelayMillis = 50,
-                                block = block
-                        )
-
-                // Then
-                assertEquals(expectedResult, result)
-                assertEquals(2, callCount, "2번 호출되어야 합니다")
             }
+
+            // When
+            val result =
+                retryWithExponentialBackoff(
+                    maxAttempts = 3,
+                    initialDelayMillis = 50,
+                    block = block
+                )
+
+            // Then
+            assertEquals(expectedResult, result)
+            assertEquals(2, callCount, "2번 호출되어야 합니다")
+        }
 
     @Test
     @DisplayName("모든 재시도가 실패하면 마지막 예외를 던진다")
     fun `retryWithExponentialBackoff should throw last exception after all attempts fail`() =
-            runTest {
-                // Given
-                val expectedMessage = "All attempts failed"
-                var callCount = 0
-                val block: suspend () -> String = {
-                    callCount++
-                    throw RuntimeException(expectedMessage)
+        runTest {
+            // Given
+            val expectedMessage = "All attempts failed"
+            var callCount = 0
+            val block: suspend () -> String = {
+                callCount++
+                throw RuntimeException(expectedMessage)
+            }
+
+            // When & Then
+            val exception =
+                assertThrows<RuntimeException> {
+                    retryWithExponentialBackoff(
+                        maxAttempts = 3,
+                        initialDelayMillis = 10,
+                        block = block
+                    )
                 }
 
-                // When & Then
-                val exception =
-                        assertThrows<RuntimeException> {
-                            retryWithExponentialBackoff(
-                                    maxAttempts = 3,
-                                    initialDelayMillis = 10,
-                                    block = block
-                            )
-                        }
-
-                assertEquals(expectedMessage, exception.message)
-                assertEquals(3, callCount, "3번 모두 호출되어야 합니다")
-            }
+            assertEquals(expectedMessage, exception.message)
+            assertEquals(3, callCount, "3번 모두 호출되어야 합니다")
+        }
 
     @Test
     @DisplayName("Exponential Backoff으로 재시도 간격이 증가한다")
@@ -113,11 +113,11 @@ class RetryUtilTest {
         // When
         try {
             retryWithExponentialBackoff(
-                    maxAttempts = 3,
-                    initialDelayMillis = 50, // 더 짧은 시간으로 테스트 속도 향상
-                    maxDelayMillis = 500,
-                    factor = 2.0,
-                    block = block
+                maxAttempts = 3,
+                initialDelayMillis = 50, // 더 짧은 시간으로 테스트 속도 향상
+                maxDelayMillis = 500,
+                factor = 2.0,
+                block = block
             )
         } catch (e: Exception) {
             // Expected to fail
@@ -140,11 +140,11 @@ class RetryUtilTest {
         // When
         try {
             retryWithExponentialBackoff(
-                    maxAttempts = 5,
-                    initialDelayMillis = 50, // 더 짧은 시간으로 테스트 속도 향상
-                    maxDelayMillis = 100, // 최대 100ms로 제한
-                    factor = 2.0,
-                    block = block
+                maxAttempts = 5,
+                initialDelayMillis = 50, // 더 짧은 시간으로 테스트 속도 향상
+                maxDelayMillis = 100, // 최대 100ms로 제한
+                factor = 2.0,
+                block = block
             )
         } catch (e: Exception) {
             // Expected to fail
@@ -163,11 +163,11 @@ class RetryUtilTest {
 
         // When
         val result =
-                retryWithExponentialBackoffCatching(
-                        maxAttempts = 3,
-                        initialDelayMillis = 50,
-                        block = block
-                )
+            retryWithExponentialBackoffCatching(
+                maxAttempts = 3,
+                initialDelayMillis = 50,
+                block = block
+            )
 
         // Then
         assertTrue(result is RetryResult.Success)
@@ -177,25 +177,25 @@ class RetryUtilTest {
     @Test
     @DisplayName("retryWithExponentialBackoffCatching은 실패 시 Failure를 반환한다")
     fun `retryWithExponentialBackoffCatching should return Failure after all attempts fail`() =
-            runTest {
-                // Given
-                val expectedMessage = "Persistent failure"
-                val block: suspend () -> String = { throw RuntimeException(expectedMessage) }
+        runTest {
+            // Given
+            val expectedMessage = "Persistent failure"
+            val block: suspend () -> String = { throw RuntimeException(expectedMessage) }
 
-                // When
-                val result =
-                        retryWithExponentialBackoffCatching(
-                                maxAttempts = 3,
-                                initialDelayMillis = 10,
-                                block = block
-                        )
+            // When
+            val result =
+                retryWithExponentialBackoffCatching(
+                    maxAttempts = 3,
+                    initialDelayMillis = 10,
+                    block = block
+                )
 
-                // Then
-                assertTrue(result is RetryResult.Failure)
-                val failure = result as RetryResult.Failure
-                assertEquals(expectedMessage, failure.exception.message)
-                assertEquals(3, failure.attempts)
-            }
+            // Then
+            assertTrue(result is RetryResult.Failure)
+            val failure = result as RetryResult.Failure
+            assertEquals(expectedMessage, failure.exception.message)
+            assertEquals(3, failure.attempts)
+        }
 
     @Test
     @DisplayName("maxAttempts가 1이면 재시도 없이 한 번만 실행된다")
@@ -231,7 +231,7 @@ class RetryUtilTest {
 
         // When
         val result =
-                retryWithExponentialBackoff(maxAttempts = 3, initialDelayMillis = 10, block = block)
+            retryWithExponentialBackoff(maxAttempts = 3, initialDelayMillis = 10, block = block)
 
         // Then
         assertEquals("Success", result)

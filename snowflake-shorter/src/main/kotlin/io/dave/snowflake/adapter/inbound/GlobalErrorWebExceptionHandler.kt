@@ -2,7 +2,6 @@ package io.dave.snowflake.adapter.inbound
 
 import io.dave.snowflake.domain.util.LogMasker
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.nio.charset.StandardCharsets
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler
 import org.springframework.core.annotation.Order
 import org.springframework.core.io.buffer.DataBuffer
@@ -12,6 +11,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
+import java.nio.charset.StandardCharsets
 
 private val logger = KotlinLogging.logger {}
 
@@ -24,11 +24,11 @@ class GlobalErrorWebExceptionHandler : ErrorWebExceptionHandler {
 
         // 예외 타입에 따른 HTTP 상태 코드 결정
         val status =
-                when (ex) {
-                    is ResponseStatusException -> ex.statusCode
-                    is IllegalArgumentException -> HttpStatus.BAD_REQUEST
-                    else -> HttpStatus.INTERNAL_SERVER_ERROR
-                }
+            when (ex) {
+                is ResponseStatusException -> ex.statusCode
+                is IllegalArgumentException -> HttpStatus.BAD_REQUEST
+                else -> HttpStatus.INTERNAL_SERVER_ERROR
+            }
 
         val httpStatus = if (status is HttpStatus) status else HttpStatus.valueOf(status.value())
         logger.error(ex) { "[API Error] Status: ${status.value()}, Message: ${maskedMessage}" }
@@ -38,7 +38,7 @@ class GlobalErrorWebExceptionHandler : ErrorWebExceptionHandler {
         response.headers.contentType = MediaType.APPLICATION_JSON
 
         val errorBody =
-                """
+            """
             {
                 "status": ${status.value()},
                 "error": "${httpStatus.reasonPhrase}",
@@ -47,7 +47,7 @@ class GlobalErrorWebExceptionHandler : ErrorWebExceptionHandler {
         """.trimIndent()
 
         val buffer: DataBuffer =
-                response.bufferFactory().wrap(errorBody.toByteArray(StandardCharsets.UTF_8))
+            response.bufferFactory().wrap(errorBody.toByteArray(StandardCharsets.UTF_8))
         return response.writeWith(Mono.just(buffer))
     }
 }

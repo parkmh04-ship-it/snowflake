@@ -53,14 +53,14 @@ class RetryFailedEventsUseCaseTest {
     fun `should mark event as RESOLVED when retry succeeds`() = runTest {
         // given
         val failedEvent =
-                FailedEvent(
-                        id = 1L,
-                        shortUrl = ShortUrl("abc123"),
-                        longUrl = LongUrl("https://example.com"),
-                        createdAt = System.currentTimeMillis(),
-                        retryCount = 1,
-                        status = FailedEventStatus.PENDING
-                )
+            FailedEvent(
+                id = 1L,
+                shortUrl = ShortUrl("abc123"),
+                longUrl = LongUrl("https://example.com"),
+                createdAt = System.currentTimeMillis(),
+                retryCount = 1,
+                status = FailedEventStatus.PENDING
+            )
 
         val mapping = UrlMapping(failedEvent.shortUrl, failedEvent.longUrl, failedEvent.createdAt)
 
@@ -88,14 +88,14 @@ class RetryFailedEventsUseCaseTest {
     fun `should increment retry count when retry fails`() = runTest {
         // given
         val failedEvent =
-                FailedEvent(
-                        id = 1L,
-                        shortUrl = ShortUrl("abc123"),
-                        longUrl = LongUrl("https://example.com"),
-                        createdAt = System.currentTimeMillis(),
-                        retryCount = 1,
-                        status = FailedEventStatus.PENDING
-                )
+            FailedEvent(
+                id = 1L,
+                shortUrl = ShortUrl("abc123"),
+                longUrl = LongUrl("https://example.com"),
+                createdAt = System.currentTimeMillis(),
+                retryCount = 1,
+                status = FailedEventStatus.PENDING
+            )
 
         coEvery { deadLetterQueuePort.findRetryableEvents(any()) } returns flowOf(failedEvent)
         coEvery { deadLetterQueuePort.update(any()) } returnsArgument 0
@@ -118,14 +118,14 @@ class RetryFailedEventsUseCaseTest {
     fun `should mark as FAILED when max retry count exceeded`() = runTest {
         // given
         val failedEvent =
-                FailedEvent(
-                        id = 1L,
-                        shortUrl = ShortUrl("abc123"),
-                        longUrl = LongUrl("https://example.com"),
-                        createdAt = System.currentTimeMillis(),
-                        retryCount = FailedEvent.MAX_RETRY_COUNT - 1, // 마지막 재시도
-                        status = FailedEventStatus.PENDING
-                )
+            FailedEvent(
+                id = 1L,
+                shortUrl = ShortUrl("abc123"),
+                longUrl = LongUrl("https://example.com"),
+                createdAt = System.currentTimeMillis(),
+                retryCount = FailedEvent.MAX_RETRY_COUNT - 1, // 마지막 재시도
+                status = FailedEventStatus.PENDING
+            )
 
         coEvery { deadLetterQueuePort.findRetryableEvents(any()) } returns flowOf(failedEvent)
         coEvery { deadLetterQueuePort.update(any()) } returnsArgument 0

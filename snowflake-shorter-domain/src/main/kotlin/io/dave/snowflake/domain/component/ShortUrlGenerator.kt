@@ -8,9 +8,9 @@ import kotlin.random.Random
 
 /** 고유하고 짧은 URL을 생성하는 도메인 서비스. 생성된 ID를 Base62로 인코딩하며, 중복을 방지하기 위해 URL 저장소에 존재 여부를 확인합니다. */
 class ShortUrlGenerator(
-        private val idGenerator: PooledIdGenerator,
-        private val urlPort: UrlPort,
-        private val random: Random = Random(System.currentTimeMillis())
+    private val idGenerator: PooledIdGenerator,
+    private val urlPort: UrlPort,
+    private val random: Random = Random(System.currentTimeMillis())
 ) {
     private val alphabet = Base62Encoder.ALPHABET
     private val alphabetSize = alphabet.length

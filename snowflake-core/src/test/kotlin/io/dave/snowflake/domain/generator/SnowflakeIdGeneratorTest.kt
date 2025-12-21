@@ -72,7 +72,7 @@ class SnowflakeIdGeneratorTest {
         Assertions.assertEquals(fixedTime, id1 shr 22)
         Assertions.assertEquals(fixedTime, id2 shr 22)
     }
-    
+
     @Test
     @DisplayName("병렬 코루틴에서 호출해도 중복되지 않는다")
     fun `nextId should be thread-safe (coroutine-safe)`() = runBlocking(Dispatchers.Default) {

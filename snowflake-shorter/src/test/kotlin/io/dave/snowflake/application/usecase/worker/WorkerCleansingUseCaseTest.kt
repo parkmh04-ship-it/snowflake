@@ -23,10 +23,25 @@ class WorkerCleansingUseCaseTest {
     fun `cleanse idle workers successfully`() = runTest {
         // given
         val threshold = LocalDateTime.now().minusMinutes(5)
-        val worker1 = io.dave.snowflake.domain.model.Worker(id = 1L, workerNum = 1L, workerName = "worker-1", status = WorkerStatus.ACTIVE, updatedAt = threshold.minusMinutes(1))
-        val worker2 = io.dave.snowflake.domain.model.Worker(id = 2L, workerNum = 2L, workerName = "worker-2", status = WorkerStatus.ACTIVE, updatedAt = threshold.minusMinutes(2))
+        val worker1 = io.dave.snowflake.domain.model.Worker(
+            id = 1L,
+            workerNum = 1L,
+            workerName = "worker-1",
+            status = WorkerStatus.ACTIVE,
+            updatedAt = threshold.minusMinutes(1)
+        )
+        val worker2 = io.dave.snowflake.domain.model.Worker(
+            id = 2L,
+            workerNum = 2L,
+            workerName = "worker-2",
+            status = WorkerStatus.ACTIVE,
+            updatedAt = threshold.minusMinutes(2)
+        )
 
-        coEvery { workerPort.findByStatusAndUpdatedAtBefore(WorkerStatus.ACTIVE, any()) } returns flowOf(worker1, worker2)
+        coEvery { workerPort.findByStatusAndUpdatedAtBefore(WorkerStatus.ACTIVE, any()) } returns flowOf(
+            worker1,
+            worker2
+        )
         coEvery { workerPort.cleanseWorkers(listOf(1L, 2L), any()) } returns 2
 
         // when
@@ -41,7 +56,7 @@ class WorkerCleansingUseCaseTest {
     fun `return 0 if no idle workers to cleanse`() = runTest {
         // given
         coEvery { workerPort.findByStatusAndUpdatedAtBefore(WorkerStatus.ACTIVE, any()) } returns emptyFlow()
-        
+
         // when
         val result = useCase.cleanseIdleWorkers()
 

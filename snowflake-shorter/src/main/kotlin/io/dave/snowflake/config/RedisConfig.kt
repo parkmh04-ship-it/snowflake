@@ -12,12 +12,12 @@ class RedisConfig {
 
     @Bean
     fun reactiveRedisTemplate(
-            factory: ReactiveRedisConnectionFactory
+        factory: ReactiveRedisConnectionFactory
     ): ReactiveRedisTemplate<String, String> {
         val serializer = StringRedisSerializer()
         val serializationContext =
-                RedisSerializationContext.newSerializationContext<String, String>(serializer)
-                        .build()
+            RedisSerializationContext.newSerializationContext<String, String>(serializer)
+                .build()
 
         return ReactiveRedisTemplate(factory, serializationContext)
     }

@@ -89,7 +89,7 @@ abstract class IntegrationTestBase {
                     val portOutput = BufferedReader(InputStreamReader(portProcess.inputStream)).readLine()?.trim()
                     mysqlPort = portOutput?.substringAfterLast(":")?.toInt() ?: 3306
                     println("MySQL container started: $mysqlContainerId on port $mysqlPort")
-                    
+
                     waitForMySQL()
                 }
             } catch (e: Exception) {

@@ -1,8 +1,6 @@
 package io.dave.snowflake.domain.model
 
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
@@ -120,11 +118,11 @@ class UrlMappingTest {
 
         // When
         val copied =
-                original.copy(
-                        shortUrl = ShortUrl("xyz"),
-                        longUrl = LongUrl("https://new.com"),
-                        createdAt = 2000L
-                )
+            original.copy(
+                shortUrl = ShortUrl("xyz"),
+                longUrl = LongUrl("https://new.com"),
+                createdAt = 2000L
+            )
 
         // Then
         assertEquals(ShortUrl("xyz"), copied.shortUrl)

@@ -24,7 +24,7 @@ class WorkerCleansingUseCase(
     suspend fun cleanseIdleWorkers(): Int {
         val threshold = LocalDateTime.now().minusMinutes(5) // 5분 이상 업데이트되지 않은 워커
         val idleWorkers = workerPort.findByStatusAndUpdatedAtBefore(WorkerStatus.ACTIVE, threshold).toList()
-        
+
         if (idleWorkers.isEmpty()) {
             return 0
         }

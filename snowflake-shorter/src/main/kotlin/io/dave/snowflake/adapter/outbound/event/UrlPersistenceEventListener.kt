@@ -36,27 +36,28 @@ class UrlPersistenceEventListener(
     private val deadLetterQueuePort: DeadLetterQueuePort,
     private val meterRegistry: MeterRegistry,
 
-) {
+    ) {
     private val logger = KotlinLogging.logger {}
-    private val eventProcessingScope = CoroutineScope(Dispatchers.IOX
+    private val eventProcessingScope = CoroutineScope(
+        Dispatchers.IOX
     ) // Virtual Thread 디스패처에서 이벤트 처리
     private val eventChannel = Channel<ShortUrlCreatedEvent>(Channel.UNLIMITED) // 무제한 버퍼를 가진 채널
 
     // 메트릭 카운터
     private val successCounter: Counter =
-            Counter.builder("url.persistence.success")
-                    .description("Number of successfully persisted URL batches")
-                    .register(meterRegistry)
+        Counter.builder("url.persistence.success")
+            .description("Number of successfully persisted URL batches")
+            .register(meterRegistry)
 
     private val failureCounter: Counter =
-            Counter.builder("url.persistence.failure")
-                    .description("Number of failed URL batch persistence attempts")
-                    .register(meterRegistry)
+        Counter.builder("url.persistence.failure")
+            .description("Number of failed URL batch persistence attempts")
+            .register(meterRegistry)
 
     private val dlqCounter: Counter =
-            Counter.builder("url.persistence.dlq")
-                    .description("Number of events sent to Dead Letter Queue")
-                    .register(meterRegistry)
+        Counter.builder("url.persistence.dlq")
+            .description("Number of events sent to Dead Letter Queue")
+            .register(meterRegistry)
 
     init {
         eventProcessingScope.launch {
@@ -89,15 +90,15 @@ class UrlPersistenceEventListener(
     private suspend fun flush(batch: List<io.dave.snowflake.domain.model.UrlMapping>) {
         // Exponential Backoff Retry 적용 (최대 3회, 초기 지연 100ms, 최대 지연 5초)
         val result =
-                retryWithExponentialBackoffCatching(
-                        maxAttempts = 3,
-                        initialDelayMillis = 100,
-                        maxDelayMillis = 5000,
-                        factor = 2.0
-                ) {
-                    // saveAll은 Flow를 받아 Flow를 반환하므로, toList()로 수집(실행)해야 함
-                    urlPort.saveAll(batch.asFlow()).toList()
-                }
+            retryWithExponentialBackoffCatching(
+                maxAttempts = 3,
+                initialDelayMillis = 100,
+                maxDelayMillis = 5000,
+                factor = 2.0
+            ) {
+                // saveAll은 Flow를 받아 Flow를 반환하므로, toList()로 수집(실행)해야 함
+                urlPort.saveAll(batch.asFlow()).toList()
+            }
 
         when (result) {
             is RetryResult.Success -> {
@@ -107,6 +108,7 @@ class UrlPersistenceEventListener(
                 }
                 successCounter.increment()
             }
+
             is RetryResult.Failure -> {
                 logger.error(result.exception) {
                     "[Event Error] Failed to persist batch after ${result.attempts} attempts. Count: ${batch.size}. Sending to DLQ..."
@@ -121,21 +123,21 @@ class UrlPersistenceEventListener(
 
     /** 실패한 배치를 Dead Letter Queue에 저장합니다. */
     private suspend fun sendToDeadLetterQueue(
-            batch: List<io.dave.snowflake.domain.model.UrlMapping>,
-            exception: Exception
+        batch: List<io.dave.snowflake.domain.model.UrlMapping>,
+        exception: Exception
     ) {
         try {
             val failedEvents =
-                    batch.map { mapping ->
-                        FailedEvent(
-                                shortUrl = mapping.shortUrl,
-                                longUrl = mapping.longUrl,
-                                createdAt = mapping.createdAt,
-                                failedAt = System.currentTimeMillis(),
-                                retryCount = 0,
-                                lastError = exception.message ?: "Unknown error"
-                        )
-                    }
+                batch.map { mapping ->
+                    FailedEvent(
+                        shortUrl = mapping.shortUrl,
+                        longUrl = mapping.longUrl,
+                        createdAt = mapping.createdAt,
+                        failedAt = System.currentTimeMillis(),
+                        retryCount = 0,
+                        lastError = exception.message ?: "Unknown error"
+                    )
+                }
 
             // DLQ에 배치 저장
             deadLetterQueuePort.saveAll(failedEvents.asFlow()).toList()

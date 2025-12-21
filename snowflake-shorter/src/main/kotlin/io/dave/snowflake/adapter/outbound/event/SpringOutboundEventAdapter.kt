@@ -8,15 +8,15 @@ import org.springframework.stereotype.Component
 
 @Component
 class SpringOutboundEventAdapter(private val eventPublisher: ApplicationEventPublisher) :
-        OutboundEventPort {
+    OutboundEventPort {
 
     override suspend fun publish(mapping: UrlMapping) {
         eventPublisher.publishEvent(
-                ShortUrlCreatedEvent(
-                        shortUrl = mapping.shortUrl,
-                        longUrl = mapping.longUrl,
-                        createdAt = mapping.createdAt
-                )
+            ShortUrlCreatedEvent(
+                shortUrl = mapping.shortUrl,
+                longUrl = mapping.longUrl,
+                createdAt = mapping.createdAt
+            )
         )
     }
 }

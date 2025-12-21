@@ -7,18 +7,18 @@ import io.dave.snowflake.domain.generator.SnowflakeIdGenerator
 import io.dave.snowflake.domain.port.WorkerIdRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
-import java.net.InetAddress
-import java.util.*
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
+import java.net.InetAddress
+import java.util.*
 
 @Configuration
 @EnableConfigurationProperties(SnowflakeProperties::class)
 class IdGeneratorConfig(
-        private val properties: SnowflakeProperties,
-        private val workerIdRepository: WorkerIdRepository
+    private val properties: SnowflakeProperties,
+    private val workerIdRepository: WorkerIdRepository
 ) {
     // Kotlin 로거 사용
     private val logger = KotlinLogging.logger {}
@@ -48,18 +48,18 @@ class IdGeneratorConfig(
      */
     @Bean
     fun pooledIdGenerator(
-            assignedWorkerInfo: AssignedWorkerInfo,
-            meterRegistry: MeterRegistry
+        assignedWorkerInfo: AssignedWorkerInfo,
+        meterRegistry: MeterRegistry
     ): PooledIdGenerator {
         val idGenerators: List<IdGenerator> =
-                assignedWorkerInfo.workerIds.map { workerId ->
-                    val generator = SnowflakeIdGenerator(workerId)
-                    MonitoredIdGenerator(
-                            generator,
-                            meterRegistry,
-                            mapOf("workerId" to workerId.toString())
-                    )
-                }
+            assignedWorkerInfo.workerIds.map { workerId ->
+                val generator = SnowflakeIdGenerator(workerId)
+                MonitoredIdGenerator(
+                    generator,
+                    meterRegistry,
+                    mapOf("workerId" to workerId.toString())
+                )
+            }
         return PooledIdGenerator(idGenerators)
     }
 }
