@@ -51,14 +51,27 @@ graph TD
 ### 의존성 규칙 (Dependency Rules)
 
 ```mermaid
-graph BT
-    Shorter[snowflake-shorter] --> Domain[snowflake-shorter-domain]
-    Shorter --> Core[snowflake-core]
+graph TD
+    subgraph "Layer 3: Infrastructure & Application (Outer)"
+        Shorter[snowflake-shorter]
+    end
+
+    subgraph "Layer 2: Domain (Middle)"
+        Domain[snowflake-shorter-domain]
+    end
+
+    subgraph "Layer 1: Core Library (Inner)"
+        Core[snowflake-core]
+    end
+
+    Shorter --> Domain
     Domain --> Core
+    Shorter -.-> Core
 ```
 
-* **핵심 원칙**: 안쪽(Domain)은 바깥쪽(Adapter)을 전혀 알지 못합니다.
-* **DIP(의존성 역전 원칙)**: 인프라 기술(Redis)은 도메인이 정의한 추상 인터페이스(`RateLimiter` 포트 등)를 구현함으로써 도메인에 플러그인됩니다.
+* **화살표 방향**: 의존성(참조)의 방향입니다. 위쪽 계층은 아래쪽 계층을 사용할 수 있지만, 아래쪽 계층은 위쪽을 알지 못합니다.
+* **Core (Layer 1)**: 가장 안쪽에 위치하며, 프로젝트의 다른 어떤 모듈에도 의존하지 않는 순수 라이브러리입니다.
+* **Domain (Layer 2)**: Core를 활용하여 비즈니스 로직을 수행하지만, 웹이나 DB 같은 인프라(Layer 3) 기술에는 의존하지 않습니다.
 
 ---
 
