@@ -38,9 +38,13 @@ class ShorterRouter {
                     ),
                     responses = [
                         ApiResponse(
-                            responseCode = "200",
+                            responseCode = "201",
                             description = "단축 URL이 성공적으로 생성되었습니다",
                             content = [Content(schema = Schema(implementation = ShortenResponse::class))]
+                        ),
+                        ApiResponse(
+                            responseCode = "400",
+                            description = "잘못된 URL 형식 또는 길이 초과"
                         )
                     ]
                 )
@@ -65,6 +69,10 @@ class ShorterRouter {
                         ApiResponse(
                             responseCode = "302",
                             description = "찾음 - 원본 긴 URL로 리다이렉트"
+                        ),
+                        ApiResponse(
+                            responseCode = "404",
+                            description = "존재하지 않는 단축 URL"
                         )
                     ]
                 )
