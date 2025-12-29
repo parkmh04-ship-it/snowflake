@@ -1,5 +1,10 @@
 # ❄️ Snowflake URL Shorter
 
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF?logo=kotlin)](https://kotlinlang.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.3-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql)](https://www.mysql.com/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 > **Global Scale을 지향하는 고성능, 고가용성 URL 단축 서비스**
 
 Snowflake URL Shorter는 Twitter Snowflake 알고리즘과 Hexagonal Architecture를 기반으로 설계된 URL 단축 서비스입니다. 대규모 트래픽 처리를 위한 비동기 아키텍처와
