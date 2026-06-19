@@ -22,24 +22,18 @@ class ShortUrlGenerator(
      * @return 고유하게 생성된 ShortUrl 객체.
      */
     suspend fun generate(): ShortUrl {
-        var shortUrlString: String
-        var isUnique = false
-
-        do {
+        while (true) {
             val id = idGenerator.nextId()
-            shortUrlString = Base62Encoder.encode(id)
+            var candidate = Base62Encoder.encode(id)
 
-            // 중복될 경우 뒤에 임의의 문자를 붙여 재시도 (최대 3회)
+            // 고유한 값을 찾으면 즉시 반환한다. 중복이면 뒤에 임의의 문자를 붙여 최대 3회 재시도하고,
+            // 그래도 중복이면 ID를 새로 받아 바깥 루프를 다시 돈다.
             repeat(3) {
-                if (!urlPort.existsByShortUrl(ShortUrl(shortUrlString))) {
-                    isUnique = true
-                    return@repeat
+                if (!urlPort.existsByShortUrl(ShortUrl(candidate))) {
+                    return ShortUrl(candidate)
                 }
-                shortUrlString += alphabet[random.nextInt(alphabetSize)]
+                candidate += alphabet[random.nextInt(alphabetSize)]
             }
-            // 3회 재시도 후에도 중복이면 ID를 새로 받아서 재시도
-        } while (!isUnique)
-
-        return ShortUrl(shortUrlString)
+        }
     }
 }
