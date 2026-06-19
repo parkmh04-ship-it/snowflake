@@ -113,8 +113,18 @@ class UrlPersistenceAdapter(
 
     override suspend fun existsByShortUrl(shortUrl: ShortUrl): Boolean {
         val key = "short:${shortUrl.value}"
-        val hasKey = reactiveRedisTemplate.hasKey(key).awaitSingleOrNull() ?: false
-        return hasKey
+        // 캐시는 TTL(5분)로 만료되므로 캐시 히트만 신뢰하고, 미스 시에는 DB를 확인해야
+        // 만료된 기존 short_url에 대한 충돌을 놓치지 않는다.
+        val cachedHit =
+            try {
+                reactiveRedisTemplate.hasKey(key).awaitSingleOrNull() ?: false
+            } catch (e: Exception) {
+                log.error(e) { "Redis error on existsByShortUrl, falling back to DB for $shortUrl" }
+                false
+            }
+        if (cachedHit) return true
+
+        return withContext(Dispatchers.IOX) { repository.existsByShortUrl(shortUrl.value) }
     }
 
     private suspend fun findAndCache(
