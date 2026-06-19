@@ -1,6 +1,5 @@
 package io.dave.snowflake.adapter.outbound.persistence
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.dave.snowflake.adapter.outbound.persistence.entity.ShorterHistoryEntity
 import io.dave.snowflake.adapter.outbound.persistence.repository.ShortUrlRepository
 import io.dave.snowflake.config.IOX
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.redis.core.ReactiveRedisTemplate
 import org.springframework.stereotype.Repository
@@ -23,7 +23,6 @@ import java.time.Duration
 class UrlPersistenceAdapter(
     private val repository: ShortUrlRepository,
     private val reactiveRedisTemplate: ReactiveRedisTemplate<String, String>,
-    private val objectMapper: ObjectMapper,
 ) : UrlPort {
 
     /**
@@ -100,7 +99,7 @@ class UrlPersistenceAdapter(
         return try {
             val cached = reactiveRedisTemplate.opsForValue()[key].awaitSingleOrNull()
             if (cached != null) {
-                objectMapper.readValue(cached, UrlMapping::class.java)
+                Json.decodeFromString<UrlMapping>(cached)
             } else {
                 findAndCache(shortUrl.value, key) { repository.findByShortUrl(it) }
             }
@@ -144,7 +143,7 @@ class UrlPersistenceAdapter(
     /** URL 매핑 정보를 Redis 캐시에 저장합니다. (Coroutines 스타일) */
     private suspend fun cacheUrlMapping(domain: UrlMapping) {
         try {
-            val json = objectMapper.writeValueAsString(domain)
+            val json = Json.encodeToString(domain)
             val key = "short:${domain.shortUrl.value}"
 
             // .subscribe() 대신 awaitSingleOrNull() 사용하여 비동기 흐름 제어

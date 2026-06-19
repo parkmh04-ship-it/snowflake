@@ -1,6 +1,5 @@
 package io.dave.snowflake.adapter.outbound.persistence
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.dave.snowflake.adapter.outbound.persistence.entity.ShorterHistoryEntity
 import io.dave.snowflake.adapter.outbound.persistence.repository.ShortUrlRepository
 import io.dave.snowflake.domain.model.LongUrl
@@ -13,6 +12,7 @@ import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -26,9 +26,8 @@ class UrlPersistenceAdapterTest {
     private val repository: ShortUrlRepository = mockk()
     private val redisTemplate: ReactiveRedisTemplate<String, String> = mockk()
     private val valueOps: ReactiveValueOperations<String, String> = mockk()
-    private val objectMapper = ObjectMapper()
 
-    private val adapter = UrlPersistenceAdapter(repository, redisTemplate, objectMapper)
+    private val adapter = UrlPersistenceAdapter(repository, redisTemplate)
 
     private fun stubCache() {
         every { redisTemplate.opsForValue() } returns valueOps
@@ -82,5 +81,21 @@ class UrlPersistenceAdapterTest {
 
         assertEquals("exist", result.shortUrl.value)
         verify(exactly = 0) { repository.save<ShorterHistoryEntity>(any()) }
+    }
+
+    @Test
+    @DisplayName("findByShortUrl: 캐시에 저장된 kotlinx JSON을 그대로 역직렬화해 캐시 적중한다")
+    fun `findByShortUrl deserializes kotlinx-encoded cache hit without touching DB`() = runTest {
+        // 캐시에는 저장 시 사용한 것과 동일한 kotlinx 직렬화 형식이 들어있다.
+        val cachedJson = Json.encodeToString(mapping("hit"))
+        every { redisTemplate.opsForValue() } returns valueOps
+        every { valueOps.get("short:hit") } returns Mono.just(cachedJson)
+
+        val result = adapter.findByShortUrl(ShortUrl("hit"))
+
+        assertEquals("hit", result?.shortUrl?.value)
+        assertEquals("https://example.com/hit", result?.longUrl?.value)
+        // 캐시 적중이므로 DB 조회는 발생하지 않는다.
+        verify(exactly = 0) { repository.findByShortUrl(any()) }
     }
 }
