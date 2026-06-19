@@ -2,6 +2,8 @@ package io.dave.snowflake.adapter.inbound
 
 import io.dave.snowflake.domain.util.LogMasker
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler
 import org.springframework.core.annotation.Order
 import org.springframework.core.io.buffer.DataBuffer
@@ -37,14 +39,17 @@ class GlobalErrorWebExceptionHandler : ErrorWebExceptionHandler {
         response.statusCode = status
         response.headers.contentType = MediaType.APPLICATION_JSON
 
+        // 메시지에 따옴표/개행 등이 포함되어도 JSON 구조가 깨지지 않도록 직렬화기를 통해 이스케이프한다.
         val errorBody =
-            """
-            {
-                "status": ${status.value()},
-                "error": "${httpStatus.reasonPhrase}",
-                "message": "${if (httpStatus.is5xxServerError) "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요." else maskedMessage}"
-            }
-        """.trimIndent()
+            buildJsonObject {
+                put("status", status.value())
+                put("error", httpStatus.reasonPhrase)
+                put(
+                    "message",
+                    if (httpStatus.is5xxServerError) "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+                    else maskedMessage
+                )
+            }.toString()
 
         val buffer: DataBuffer =
             response.bufferFactory().wrap(errorBody.toByteArray(StandardCharsets.UTF_8))
