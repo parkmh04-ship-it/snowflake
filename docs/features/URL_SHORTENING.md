@@ -17,12 +17,14 @@ graph TD
     subgraph DB Transaction
         UseCase -->|4. Save| Outbox[(Outbox Table)]
     end
-    UseCase -->|5. Save Cache| RedisCache[(Redis Cache)]
-    UseCase -->|6. Publish| Event[Event Publisher]
-    UseCase -->|7. Return 201| User
-    
+    UseCase -->|5. Publish| Event[Event Publisher]
+    UseCase -->|6. Return 201| User
+
+    Listener[Event Listener] -->|7. Persist + Write-Through| MainDB[(MySQL Main DB)]
+    Listener --> RedisCache[(Redis Cache)]
+
     Relay[Outbox Relay Worker] -->|Polling| Outbox
-    Relay -->|8. Batch Save| MainDB[(MySQL Main DB)]
+    Relay -->|8. Batch Persist + Write-Through| MainDB
     Relay -->|9. Delete| Outbox
 ```
 
@@ -39,7 +41,7 @@ graph TD
 ### 3. 삼중 보장 저장 전략 (Triple-Reliability Persistence)
 
 1. **Transactional Outbox**: 비즈니스 트랜잭션 내에서 `outbox` 테이블에 이벤트를 먼저 영속화하여, 애플리케이션 장애 시에도 데이터 유실을 방지합니다.
-2. **Write-Through (Cache)**: Redis에 즉시 저장하여 이어지는 첫 번째 조회부터 즉각적인 성능을 보장합니다.
+2. **Write-Through (Cache)**: 매핑을 DB에 영속화할 때(이벤트 리스너/Relay) Redis에도 함께 적재하여 이어지는 조회 성능을 보장합니다. (멱등 저장으로 두 경로가 충돌 없이 공존)
 3. **Outbox Relay**: 백그라운드 워커가 Outbox 데이터를 메인 DB로 안전하게 이관하며 **At-least-once delivery**를 실현합니다.
 
 ---

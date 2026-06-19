@@ -83,8 +83,8 @@ graph TD
 2. **Request Handling**: `Web Adapter`가 요청을 검증하고 `ShortenUrlUseCase`를 호출합니다.
 3. **ID Generation & Encoding**: Snowflake ID 생성 및 Base62 인코딩을 수행합니다.
 4. **Transactional Outbox**: **핵심 비즈니스 트랜잭션** 내에서 생성된 매핑 정보를 `outbox` 테이블에 기록합니다. (데이터 영속성 보장)
-5. **Caching**: 생성된 정보를 Redis에 Coroutines 스타일로 즉시 기록합니다. (조회 성능 확보)
-6. **Event Publishing**: 비동기 처리를 위해 내부 이벤트를 발행합니다.
+5. **Event Publishing**: 비동기 처리를 위해 내부 이벤트를 발행합니다. (요청 흐름과 분리)
+6. **Async Persistence & Cache**: 이벤트 리스너/Relay Worker가 매핑을 실제 DB에 영속화하며, 이때 Redis에 Write-Through로 캐시를 적재합니다. (조회 성능 확보)
 7. **Response**: 저장 완료 여부와 관계없이 생성된 단축 URL을 클라이언트에게 즉시 응답(201 Created)합니다.
 
 ### Outbox Relay (Background Processing)

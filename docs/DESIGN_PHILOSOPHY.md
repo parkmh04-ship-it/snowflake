@@ -57,7 +57,7 @@ Spring WebFlux는 기본적으로 Reactor를 사용하지만, 우리는 **Kotlin
 완전한 Non-blocking 스택인 R2DBC 대신, **JPA (Hibernate)**를 선택했습니다.
 
 * **성숙도와 생태계**: JPA의 강력한 ORM 기능, 캐싱, 더티 체킹 등 성숙한 기능을 활용하여 개발 생산성을 높입니다.
-* **Blocking I/O 처리**: JDBC는 Blocking API이므로, **`virtualDispatcher`** 컨텍스트로 감싸서 실행하여 WebFlux의 Event Loop(Netty)가 차단되지
+* **Blocking I/O 처리**: JDBC는 Blocking API이므로, **`Dispatchers.IOX`** 컨텍스트로 감싸서 실행하여 WebFlux의 Event Loop(Netty)가 차단되지
   않도록 철저히 격리했습니다.
 
 ### 왜 JPA 엔티티에 Data Class를 사용하는가?
@@ -71,7 +71,7 @@ Spring WebFlux는 기본적으로 Reactor를 사용하지만, 우리는 **Kotlin
 Kotlin Coroutines가 이미 강력한데 왜 Java 21의 Virtual Threads가 필요할까요?
 
 * **Blocking I/O의 격리**: JDBC(JPA)와 같은 Blocking API를 호출할 때, 기존 `Dispatchers.IO`는 OS 스레드를 점유합니다. 이를 **Virtual Threads 기반의
-  커스텀 Dispatcher** (`virtualDispatcher`)로 대체하여, OS 스레드 차단 없이 수천 개의 동시 DB 요청을 처리할 수 있게 했습니다.
+  커스텀 Dispatcher** (`Dispatchers.IOX`)로 대체하여, OS 스레드 차단 없이 수천 개의 동시 DB 요청을 처리할 수 있게 했습니다.
 * **Coroutines의 강점 유지**: 비즈니스 로직의 흐름 제어, 에러 핸들링, 취소(Cancellation) 등은 여전히 Coroutines의 **구조화된 동시성(Structured Concurrency)
   ** 모델을 따릅니다.
 * **결론**: **Application Logic (Non-blocking) = Coroutines**, **Blocking Infra (DB) = Virtual Threads** 라는 최적의 조합을 찾아

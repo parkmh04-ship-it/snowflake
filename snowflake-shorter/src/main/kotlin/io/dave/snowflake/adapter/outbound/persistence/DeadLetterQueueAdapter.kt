@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
-/** DeadLetterQueuePort의 JPA 기반 구현체입니다. JDBC 블로킹 호출을 virtualDispatcher로 격리하여 논블로킹 특성을 유지합니다. */
+/** DeadLetterQueuePort의 JPA 기반 구현체입니다. JDBC 블로킹 호출을 Dispatchers.IOX(가상 스레드)로 격리하여 논블로킹 특성을 유지합니다. */
 @Component
 class DeadLetterQueueAdapter(
     private val failedEventRepository: FailedEventRepository,

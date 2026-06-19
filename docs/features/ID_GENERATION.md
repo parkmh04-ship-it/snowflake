@@ -14,7 +14,7 @@ Snowflake URL Shorter는 분산 환경에서 유일하고 정렬 가능한 ID를
 | 비트 (Bits)   | 설명 (Description)               | 범위/용량                     |
 |:------------|:-------------------------------|:--------------------------|
 | **1 bit**   | Sign Bit (미사용, 항상 0)           | 양수 보장                     |
-| **41 bits** | Timestamp (Epoch Milliseconds) | 약 69년 (2109년까지 사용 가능)     |
+| **41 bits** | Timestamp (Epoch Milliseconds) | 약 69년 (Unix epoch 1970 기준, ~2039년) |
 | **10 bits** | Worker ID (Node ID)            | 0 ~ 1023 (최대 1,024개 노드)   |
 | **12 bits** | Sequence Number                | 0 ~ 4095 (밀리초당 4,096개 ID) |
 
@@ -51,4 +51,4 @@ Snowflake URL Shorter는 분산 환경에서 유일하고 정렬 가능한 ID를
 ## 🛑 동시성 제어 (Concurrency Control)
 
 * **Kotlin Coroutines Mutex**: `nextId()` 메서드는 `Mutex`로 보호되어, 멀티 스레드(코루틴) 환경에서도 원자성(Atomicity)을 보장합니다.
-* **Optimistic Locking**: Worker ID 할당 시 DB의 동시성 제어 메커니즘을 활용합니다.
+* **Pessimistic Locking**: Worker ID 할당 시 `PESSIMISTIC_WRITE` 잠금으로 IDLE 워커 행을 점유하여 인스턴스 간 중복 할당을 방지합니다.

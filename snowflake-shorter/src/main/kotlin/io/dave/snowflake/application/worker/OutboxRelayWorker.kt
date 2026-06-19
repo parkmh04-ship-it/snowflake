@@ -2,7 +2,6 @@ package io.dave.snowflake.application.worker
 
 import io.dave.snowflake.config.IOX
 import io.dave.snowflake.domain.model.UrlMapping
-import io.dave.snowflake.domain.port.outbound.OutboundEventPort
 import io.dave.snowflake.domain.port.outbound.OutboxPort
 import io.dave.snowflake.domain.port.outbound.UrlPort
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -26,8 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Component
 class OutboxRelayWorker(
     private val outboxPort: OutboxPort,
-    private val urlPort: UrlPort,
-    private val outboundEventPort: OutboundEventPort
+    private val urlPort: UrlPort
 ) {
     private val logger = KotlinLogging.logger {}
     private val isRunning = AtomicBoolean(false)
